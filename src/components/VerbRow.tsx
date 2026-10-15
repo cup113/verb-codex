@@ -7,15 +7,26 @@ type Props = {
   verb: Verb;
   onPress: () => void;
   onLongPress: () => void;
+  /** True while this row is the one being dragged. */
+  dragging?: boolean;
 };
 
-export function VerbRow({ verb, onPress, onLongPress }: Props) {
+export function VerbRow({
+  verb,
+  onPress,
+  onLongPress,
+  dragging = false,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={400}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        pressed && styles.pressed,
+        dragging && styles.dragging,
+      ]}
     >
       <Text style={styles.infinitive} numberOfLines={1}>
         {verb.infinitive}
@@ -39,6 +50,12 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.75,
+  },
+  // Lifted off the paper while held: the row that is being dragged has to be
+  // unmistakably the one under the finger.
+  dragging: {
+    elevation: 8,
+    borderColor: colors.terracotta,
   },
   infinitive: {
     ...serif(22),

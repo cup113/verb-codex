@@ -4,6 +4,7 @@ import {
   filledCount,
   nextVerbId,
   parseVerbs,
+  reorderWithinGroup,
   withInfinitive,
   withNote,
   withRow,
@@ -11,6 +12,70 @@ import {
 import { PRONOUNS, ROW_COUNT, pronounFor } from '../../src/types';
 
 const NOW = 1_700_000_000_000;
+
+describe('reorderWithinGroup', () => {
+  const aimer = createVerb({
+    id: 'a',
+    infinitive: 'aimer',
+    group: 1,
+    now: NOW,
+  });
+  const parler = createVerb({
+    id: 'b',
+    infinitive: 'parler',
+    group: 1,
+    now: NOW,
+  });
+  const chanter = createVerb({
+    id: 'c',
+    infinitive: 'chanter',
+    group: 1,
+    now: NOW,
+  });
+  const finir = createVerb({
+    id: 'z',
+    infinitive: 'finir',
+    group: 2,
+    now: NOW,
+  });
+
+  const ids = (verbs: ReturnType<typeof reorderWithinGroup>) =>
+    verbs.map(verb => verb.id);
+
+  it('moves an entry within its own group', () => {
+    expect(
+      ids(reorderWithinGroup([aimer, parler, chanter, finir], 'a', 2)),
+    ).toEqual(['b', 'c', 'a', 'z']);
+  });
+
+  it('leaves other groups in the array slots they already occupy', () => {
+    expect(
+      ids(reorderWithinGroup([aimer, finir, parler, chanter], 'c', 0)),
+    ).toEqual(['c', 'z', 'a', 'b']);
+  });
+
+  it('clamps a target past the end of the group', () => {
+    expect(ids(reorderWithinGroup([aimer, parler, chanter], 'a', 99))).toEqual([
+      'b',
+      'c',
+      'a',
+    ]);
+  });
+
+  it('returns the very same array when nothing would change', () => {
+    const verbs = [aimer, parler, chanter];
+    expect(reorderWithinGroup(verbs, 'b', 1)).toBe(verbs);
+    expect(reorderWithinGroup(verbs, 'nope', 0)).toBe(verbs);
+  });
+
+  it('moves entries, it does not rewrite them', () => {
+    const moved = reorderWithinGroup([aimer, parler], 'a', 1);
+
+    expect(moved[0]).toBe(parler);
+    expect(moved[1]).toBe(aimer);
+    expect(moved[1].updatedAt).toBe(aimer.updatedAt);
+  });
+});
 
 describe('notes', () => {
   it('starts empty, so recording one is always an explicit act', () => {

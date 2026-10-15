@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   BackHandler,
   KeyboardAvoidingView,
   Platform,
@@ -48,6 +49,21 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     );
     return () => subscription.remove();
   }, [testing, exitTest]);
+
+  const confirmDelete = () => {
+    if (!verb) {
+      return;
+    }
+    Alert.alert(copy.deleteTitle(verb.infinitive), copy.deleteBody, [
+      { text: copy.cancel, style: 'cancel' },
+      {
+        text: copy.delete,
+        style: 'destructive',
+        // Leaving the entry that no longer exists would show an empty screen.
+        onPress: () => verbStore.removeVerb(verb.id).then(navigation.goBack),
+      },
+    ]);
+  };
 
   const back = (
     <Pressable
@@ -99,7 +115,16 @@ export function VerbDetailScreen({ route, navigation }: Props) {
           </View>
         }
       >
-        {back}
+        <View style={styles.topRow}>
+          {back}
+          <Pressable
+            onPress={confirmDelete}
+            hitSlop={10}
+            style={styles.deleteRow}
+          >
+            <Text style={styles.deleteLabel}>{copy.delete}</Text>
+          </Pressable>
+        </View>
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -171,10 +196,21 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   backRow: {
     alignSelf: 'flex-start',
     paddingVertical: 6,
-    marginBottom: 12,
+  },
+  deleteRow: {
+    paddingVertical: 6,
+  },
+  deleteLabel: {
+    ...serif(14, { fontFamily: fonts.serifItalic, color: colors.terracotta }),
   },
   back: {
     ...serif(15, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),

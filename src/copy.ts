@@ -19,7 +19,7 @@ export const copy = {
   delete: 'Supprimer',
   deleteTitle: (infinitive: string) => `Supprimer « ${infinitive} » ?`,
   deleteBody: 'Cette entrée et ses six lignes seront effacées.',
-  longPressHint: 'Appui long pour supprimer',
+  longPressHint: 'Appui long pour réordonner',
   masked: '…',
   noteLabel: 'Notes',
   notePlaceholder: 'Prononciation, usage, remarques…',

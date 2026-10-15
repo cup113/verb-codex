@@ -12,14 +12,15 @@
 
 ## 交互
 
-| 动作               | 结果                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 列表页三条分组标签 | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位 |
-| 点击某行           | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                              |
-| 详情页「Notes」    | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                    |
-| 长按某行           | 确认后删除该条目                                                                                                                      |
-| 「+ Nouveau」      | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                             |
-| 「S'entraîner」    | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面                                        |
+| 动作                    | 结果                                                                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位   |
+| 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                |
+| 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义 |
+| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                      |
+| 长按某行                | 拿起该行并拖动，在**分组**内重排**次序**                                                                                                |
+| 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                               |
+| 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面                                          |
 
 首次启动会写入三条示例条目（aimer / finir / aller，即 demo 卡片上的那三个），可随意修改或长按删除；删空之后不会再次写入。
 
@@ -31,7 +32,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：41 个用例，覆盖领域逻辑、存储、行组件、列表页与 App 装配
+npm test               # jest：47 个用例，覆盖领域逻辑、存储、行组件、列表页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -73,6 +74,22 @@ python tools/make-icons.py     # 需要 Pillow
 - **自适应图标**（API 26+，即绝大多数设备）：`mipmap-anydpi-v26/ic_launcher{,_round}.xml` = 纯色底 `@color/ic_launcher_background` + 透明前景层。前景缩放由**实测**的主体半径算出（实测 0.388 → 缩放 0.838），确保落在 72dp 安全圆内，圆形/方圆/水滴蒙版都不会切断主体。
 - **传统方形/圆形**（minSdk 24，API 24/25 仍需要）：全出血，形状直接烘焙进 PNG。
 - 抠背景用"从边框 flood fill"而不是全局色阈：插画领口那道绿边与底色接近但**不连通**，全局阈值会把它一起抹掉。
+
+### 拖动与手势（3 个新增原生依赖）
+
+长按拖动重排由 `react-native-draggable-flatlist` 完成，它依赖 `react-native-gesture-handler` 与 `react-native-reanimated`（后者在 4.x 又把 worklet 变换拆到了 `react-native-worklets`）。四处接线，缺一处就报错：
+
+| 位置              | 内容                                                                                                       | 为什么                                                                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `babel.config.js` | `react-native-worklets/plugin`（必须放最后一个插件）                                                       | reanimated 4 的 worklet 变换已搬到 worklets，`react-native-reanimated/plugin` 只是它的再导出                                           |
+| `metro.config.js` | `wrapWithReanimatedMetroConfig`                                                                            | 对纯 Android 只有堆栈折叠生效，其余分支是 `.windows` 兜底                                                                              |
+| `App.tsx`         | `GestureHandlerRootView` 包住全树                                                                          | gesture-handler 的检测器必须挂在这个根视图之下                                                                                         |
+| `jest.setup.js`   | `react-native-gesture-handler/jestSetup` + 给 worklets 的 `getUIRuntimeHolder`/`getUISchedulerHolder` 打桩 | jest 下 worklets 会解析到 **web 变体**，那两个函数在 web 变体里**故意抛错**，而报错发生在 microtask 里、会以"测试失败"的形式出现在别处 |
+
+两个代价，写在这里免得下次惊讶：
+
+- **构建变慢**：reanimated/worklets/gesture-handler 都要为 4 个 ABI 编译原生代码，本地首次 `assembleRelease` 从 1 分半涨到 **11 分半**（增量构建仍快）；CI 上同理。
+- **测试日志有噪音**：`draggable-flatlist` 内部给 reanimated 的 `useDerivedValue` 传了 deps 数组，reanimated 4 会重复警告 "Dependencies should only be used on the web"。这是该库写在 reanimated 4 之前的痕迹，不影响行为。
 
 ### Android 构建要点（Windows）
 

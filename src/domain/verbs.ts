@@ -55,6 +55,38 @@ export function withNote(verb: Verb, note: string, now: number): Verb {
   return { ...verb, note, updatedAt: now };
 }
 
+/**
+ * Move one entry to a new position among the entries of its own group.
+ *
+ * Order is per group: the list is filtered by group, so a group's members
+ * swap among the array slots they already occupy and entries of other
+ * groups keep theirs. Array position stays the single source of truth, so
+ * there is no order field to keep in sync.
+ */
+export function reorderWithinGroup(
+  verbs: Verb[],
+  id: string,
+  toIndex: number,
+): Verb[] {
+  const moving = verbs.find(verb => verb.id === id);
+  if (!moving) {
+    return verbs;
+  }
+  const inGroup = verbs.filter(verb => verb.group === moving.group);
+  const from = inGroup.findIndex(verb => verb.id === id);
+  const to = Math.max(0, Math.min(toIndex, inGroup.length - 1));
+  if (from === to) {
+    return verbs;
+  }
+  const reordered = [...inGroup];
+  const [moved] = reordered.splice(from, 1);
+  reordered.splice(to, 0, moved);
+  let next = 0;
+  return verbs.map(verb =>
+    verb.group === moving.group ? reordered[next++] : verb,
+  );
+}
+
 /** Local-only identifier: collisions need uniqueness, not cryptography. */
 export function nextVerbId(now: number, salt: number = Math.random()): string {
   return `v${now.toString(36)}${Math.floor(salt * 1e6).toString(36)}`;

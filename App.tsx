@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { AppState, StatusBar } from 'react-native';
+import { AppState, StatusBar, StyleSheet } from 'react-native';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import type { Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { colors } from './src/theme';
 import { verbStore } from './src/storage/verbStore';
 import { VerbListScreen } from './src/screens/VerbListScreen';
@@ -38,27 +39,36 @@ function App() {
     return () => subscription.remove();
   }, []);
 
+  // Gesture handler needs to own the root view; everything else nests inside.
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" />
-      <NavigationContainer theme={paperTheme}>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.paper },
-          }}
-        >
-          <Stack.Screen name="VerbList" component={VerbListScreen} />
-          <Stack.Screen name="VerbDetail" component={VerbDetailScreen} />
-          <Stack.Screen
-            name="AddVerb"
-            component={AddVerbScreen}
-            options={{ presentation: 'modal' }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <StatusBar barStyle="dark-content" />
+        <NavigationContainer theme={paperTheme}>
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.paper },
+            }}
+          >
+            <Stack.Screen name="VerbList" component={VerbListScreen} />
+            <Stack.Screen name="VerbDetail" component={VerbDetailScreen} />
+            <Stack.Screen
+              name="AddVerb"
+              component={AddVerbScreen}
+              options={{ presentation: 'modal' }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
 
 export default App;

@@ -5,6 +5,7 @@ import {
   createVerb,
   nextVerbId,
   parseVerbs,
+  reorderWithinGroup,
   withInfinitive,
   withNote,
   withRow,
@@ -40,6 +41,7 @@ export type VerbStore = {
   setRow(verbId: string, index: number, patch: Partial<ConjugationRow>): void;
   setInfinitive(verbId: string, infinitive: string): void;
   setNote(verbId: string, note: string): void;
+  reorderVerb(verbId: string, toIndex: number): Promise<void>;
   removeVerb(verbId: string): Promise<void>;
 };
 
@@ -204,6 +206,20 @@ export function createVerbStore(
     schedulePersist();
   }
 
+  // Not debounced like typing: reordering is structural, and the entry
+  // objects themselves are only moved, never rewritten, so updatedAt stays
+  // a record of content changes.
+  async function reorderVerb(verbId: string, toIndex: number): Promise<void> {
+    const next = reorderWithinGroup(verbs, verbId, toIndex);
+    if (next === verbs) {
+      return;
+    }
+    verbs = next;
+    revision++;
+    publish();
+    await writeNow();
+  }
+
   async function removeVerb(verbId: string): Promise<void> {
     const next = verbs.filter(verb => verb.id !== verbId);
     if (next.length === verbs.length) {
@@ -227,6 +243,7 @@ export function createVerbStore(
     setRow,
     setInfinitive,
     setNote,
+    reorderVerb,
     removeVerb,
   };
 }

@@ -11,7 +11,14 @@ const NOW = 1_700_000_000_000;
 
 // A large debounce keeps every coalesced write pending until the test flushes,
 // so "did it write?" is never a race against a timer.
-const OPTIONS = { now: () => NOW, debounceMs: 60_000, id: () => 'v-new' };
+// Unique per call: a constant id would make two entries indistinguishable to
+// the reorder and remove operations.
+let nextId = 0;
+const OPTIONS = {
+  now: () => NOW,
+  debounceMs: 60_000,
+  id: () => `v${++nextId}`,
+};
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const entries = new Map(Object.entries(initial));
@@ -198,6 +205,23 @@ describe('createVerbStore', () => {
     await store.flush();
 
     expect(persisted(entries)[0].note).toBe('prononciation : èmé');
+  });
+
+  it('persists a reorder without disturbing the other groups', async () => {
+    const { storage, entries } = memoryStorage({ [SEEDED_KEY]: 'true' });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const first = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    await store.addVerb({ infinitive: 'parler', group: 1 });
+    await store.addVerb({ infinitive: 'finir', group: 2 });
+
+    await store.reorderVerb(first.id, 1);
+
+    expect(persisted(entries).map(verb => verb.infinitive)).toEqual([
+      'parler',
+      'aimer',
+      'finir',
+    ]);
   });
 
   it('ignores edits addressed to an entry that is gone', async () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReactTestRenderer from 'react-test-renderer';
 import { VerbRow } from '../../src/components/VerbRow';
 import { GroupTabs } from '../../src/components/GroupTabs';
@@ -39,14 +40,18 @@ async function renderList() {
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(
-      <SafeAreaProvider initialMetrics={METRICS}>
-        <VerbListScreen
-          navigation={navigation}
-          route={
-            { key: 'VerbList-1', name: 'VerbList' } as ScreenProps['route']
-          }
-        />
-      </SafeAreaProvider>,
+      // The draggable list uses gesture-handler, which refuses to mount its
+      // detectors outside this root — in the app it wraps everything.
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider initialMetrics={METRICS}>
+          <VerbListScreen
+            navigation={navigation}
+            route={
+              { key: 'VerbList-1', name: 'VerbList' } as ScreenProps['route']
+            }
+          />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>,
     );
   });
   const rendered = tree as ReactTestRenderer.ReactTestRenderer;
