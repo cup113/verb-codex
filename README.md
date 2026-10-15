@@ -1,6 +1,6 @@
 # 变位法典 (VerbCodex)
 
-个人法语变位备忘录（Android / React Native）。你亲手把学到的动词和它的六行现在时变位写进法典，之后随时翻看、遮盖自测。
+个人法语变位备忘录（Android / React Native；另有一个实验性的 Web 目标，见 [docs/spike-web.md](docs/spike-web.md)）。你亲手把学到的动词和它的六行现在时变位写进法典，之后随时翻看、遮盖自测。
 
 原型参照 [demo](demo)（法式纸质笔记风的单页 HTML），本 App 是它的 React Native 重写：同样的纸色、赤陶色词尾、衬线 + 等宽排版，但把"一张卡片"拆成了"一本可以记录、可以翻阅的法典"。
 
@@ -12,17 +12,17 @@
 
 ## 交互
 
-| 动作                    | 结果                                                                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位   |
-| 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                |
-| 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义 |
-| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                      |
-| 长按某行                | 拿起该行并拖动，在**分组**内重排**次序**                                                                                                |
-| 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                               |
-| 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面                                          |
+| 动作                    | 结果                                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位    |
+| 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                 |
+| 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义  |
+| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                       |
+| 长按某行（仅 Android）  | 拿起该行并拖动，在**分组**内重排**次序**；web 上不提供重排（见 [docs/spike-web.md](docs/spike-web.md)）                                  |
+| 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                                |
+| 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键） |
 
-首次启动会写入三条示例条目（aimer / finir / aller，即 demo 卡片上的那三个），可随意修改或长按删除；删空之后不会再次写入。
+首次启动会写入三条示例条目（aimer / finir / aller，即 demo 卡片上的那三个），可随意修改或删除（删除在详情页顶部）；删空之后不会再次写入。
 
 代词第一行按词干首字母显示 `j'` 或 `je`（元音及 h 前省音）——这是排版便利，不是语法判断。
 
@@ -44,9 +44,14 @@ App.tsx                     导航装配（native-stack）+ 启动时载入法�
 src/types.ts                领域类型、六行代词、分组标签、代词省音
 src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读盘（可单测，无原生依赖）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
+src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
+src/platform/               平台分包：删除确认（原生 Alert / web window.confirm）
 src/data/seed.ts            首启的三条示例条目
 src/screens/                列表 / 详情（含自测态）/ 新增
-src/components/             Screen、分组标签、变位行、列表行、按钮
+src/components/             Screen、分组标签、变位行、列表行、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
+web/main.tsx                web 入口（AppRegistry.runApplication）
+index.html                  web 挂载点（#root 必须是 flex 容器，原因见 spike 文档）
+vite.config.mts             web 构建配置（精确 alias / 扩展名顺序 / optimizeDeps 排除）
 assets/fonts/               字体源文件（构建时同步进 android/app/src/main/assets/fonts）
 ```
 
@@ -99,14 +104,29 @@ python tools/make-icons.py     # 需要 Pillow
 - 模拟器若出现黑屏 + `adb devices` 显示 `offline`，多半是陈旧的 quickboot 快照：删 `~/.android/avd/<avd>.avd/snapshots/*` 后用 `-no-snapshot` 启动（`quickbootChoice.ini` 的 `saveOnExit=true` 会让它反复复发）。
 - debug 与 release 是两条路径：debug APK 里没有 `assets/index.android.bundle`（JS 由 Metro 提供），生产管线要用 `./gradlew assembleRelease` 验证。
 
+## Web / PWA（实验性）
+
+`npm run web` 能在浏览器里跑起来，实测除**长按拖动重排**外全部功能可用（列表、分组筛选、详情、附注、新增、自测、删除、持久化），dev 与构建产物渲染逐像素一致。**次序只在 Android 上调整**：web 列表是 `VerbList.web.tsx`，一个不提供重排的普通 `FlatList`。
+
+完整结论、证据截图与三处平台差异（存储 / 删除确认 / 返回键）见 **[docs/spike-web.md](docs/spike-web.md)**。
+
+```sh
+npm run web         # Vite dev server（HMR）
+npm run web:build   # 产出 dist/
+npx vite preview    # 预览构建产物
+```
+
+尚未完成的部分（favicon、manifest、service worker、导出/导入 JSON、CI 的 `web` job）在 spike 文档末尾逐条列出。
+
 ## CI（GitHub Actions）
 
-`.github/workflows/ci.yml` 两个 job（push / pull_request / workflow_dispatch 触发，同分支的旧运行会被取消）：
+`.github/workflows/ci.yml` 三个 job（push / pull_request / workflow_dispatch 触发，同分支的旧运行会被取消）：
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck` → `jest --ci`（36 个用例）                                                                                                                                                             |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（47 个用例）                                                                                                                                   |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
+| `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |
 
 CI 上会把 `gradle-wrapper.properties` 的 `distributionUrl` 临时改回 Gradle 官方地址（本地用腾讯镜像是为了速度），`distributionSha256Sum` 本来就是官方校验和，两边都能验证。
 
@@ -136,4 +156,4 @@ CI 上会把 `gradle-wrapper.properties` 的 `distributionUrl` 临时改回 Grad
 
 - **其他**：本 App 无网络请求、无账号、字体已打包，所以不需要 `GOOGLE_SERVICES_JSON` / `MAPS_API_KEY` 之类。将来若要自动发版到 Play，才需要额外的 service account JSON secret。
 
-> 注意：当前工作目录还不是 git 仓库，`git init` 并推到 GitHub 之后 CI 才会真正运行。
+> 打 tag 即发版：`git tag v0.1.0 && git push origin v0.1.0` 触发 `android` 构建，随后 `release` job 把 APK/AAB 挂到该 tag 的 Release 上——构件本身 14 天过期，**Release 资产不过期**，这才是可分发的产物。

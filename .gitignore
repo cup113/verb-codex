@@ -79,3 +79,9 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 .ci-artifact/
+
+# Vite's web output
+/dist/
+
+# Playwright MCP writes its page snapshots and console logs here.
+.playwright-mcp/

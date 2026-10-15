@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   BackHandler,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { ConjugationRowView } from '../components/ConjugationRowView';
 import { OutlinedButton } from '../components/OutlinedButton';
+import { confirmDestructive } from '../platform/confirmDestructive';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
@@ -35,8 +35,12 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     setRevealed(new Set<number>());
   }, []);
 
-  // Android back leaves self-test before it leaves the entry.
+  // Android back leaves self-test before it leaves the entry. There is no
+  // hardware key on the web, and react-native-web's stub only logs an error.
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
@@ -54,15 +58,14 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     if (!verb) {
       return;
     }
-    Alert.alert(copy.deleteTitle(verb.infinitive), copy.deleteBody, [
-      { text: copy.cancel, style: 'cancel' },
-      {
-        text: copy.delete,
-        style: 'destructive',
-        // Leaving the entry that no longer exists would show an empty screen.
-        onPress: () => verbStore.removeVerb(verb.id).then(navigation.goBack),
-      },
-    ]);
+    confirmDestructive({
+      title: copy.deleteTitle(verb.infinitive),
+      body: copy.deleteBody,
+      confirmLabel: copy.delete,
+      cancelLabel: copy.cancel,
+      // Leaving the entry that no longer exists would show an empty screen.
+      onConfirm: () => verbStore.removeVerb(verb.id).then(navigation.goBack),
+    });
   };
 
   const back = (

@@ -7,3 +7,11 @@ screenshots
 
 # Hand-formatted and validated with actionlint instead.
 .github
+
+# Vite's web output: rewriting the built bundle would be pure churn.
+dist
+
+# CI artifacts pulled down with `gh run download`, and the gh cache the DSH
+# sandbox forces inside the workspace.
+.ci-artifact
+.ghcache

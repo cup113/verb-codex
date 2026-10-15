@@ -1,0 +1,15 @@
+/*
+ * The web program. Same sources, but with the DOM library switched on so the
+ * `.web.ts` twins can touch `window`/`document` — which is exactly what the
+ * native program must *not* be able to do, hence the two configs rather than
+ * one. `tsc` does not know Vite's extension order, so the `.web.*` files are
+ * excluded from the native program by name and included here explicitly.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "dom", "dom.iterable"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}

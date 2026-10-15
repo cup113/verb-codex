@@ -6,7 +6,8 @@ import { cardSurface, colors, mono, serif } from '../theme';
 type Props = {
   verb: Verb;
   onPress: () => void;
-  onLongPress: () => void;
+  /** Absent on the web, where the list cannot be reordered. */
+  onLongPress?: () => void;
   /** True while this row is the one being dragged. */
   dragging?: boolean;
 };

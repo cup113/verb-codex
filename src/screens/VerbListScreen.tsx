@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import DraggableFlatList, {
-  ScaleDecorator,
-} from 'react-native-draggable-flatlist';
 import { Screen } from '../components/Screen';
 import { Counter, GroupTabs } from '../components/GroupTabs';
-import { VerbRow } from '../components/VerbRow';
+import { VerbList } from '../components/VerbList';
 import { OutlinedButton } from '../components/OutlinedButton';
 import { copy } from '../copy';
 import { colors, fonts, serif } from '../theme';
@@ -28,8 +25,18 @@ export function VerbListScreen({ navigation }: Props) {
   return (
     <Screen
       footer={
-        <View style={styles.actions}>
-          <Text style={styles.tip}>{copy.longPressHint}</Text>
+        <View
+          style={[
+            styles.actions,
+            // With the hint gone the button is the only child, and
+            // `space-between` would strand it on the left.
+            Platform.OS === 'web' && styles.actionsWeb,
+          ]}
+        >
+          {/* The web list is not reorderable, so it claims nothing. */}
+          {Platform.OS === 'web' ? null : (
+            <Text style={styles.tip}>{copy.longPressHint}</Text>
+          )}
           <OutlinedButton
             label={copy.newVerb}
             onPress={() => navigation.navigate('AddVerb')}
@@ -42,34 +49,17 @@ export function VerbListScreen({ navigation }: Props) {
         <Counter shown={shown.length} total={verbs.length} />
       </View>
       <GroupTabs active={group} onChange={setGroup} />
-      <DraggableFlatList
-        data={shown}
-        keyExtractor={verb => verb.id}
-        // `to` indexes the reordered array, so that entry is the dragged one;
-        // the store does the moving and writes it out immediately.
-        onDragEnd={({ data, to }) => verbStore.reorderVerb(data[to].id, to)}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={
-          shown.length === 0 ? styles.emptyWrap : undefined
-        }
-        ListEmptyComponent={
+      <VerbList
+        verbs={shown}
+        empty={
           <Text style={styles.empty}>
             {verbs.length === 0 ? copy.emptyCodex : copy.emptyGroup}
           </Text>
         }
-        renderItem={({ item, drag, isActive }) => (
-          <ScaleDecorator>
-            <VerbRow
-              verb={item}
-              dragging={isActive}
-              onPress={() =>
-                navigation.navigate('VerbDetail', { verbId: item.id })
-              }
-              onLongPress={drag}
-            />
-          </ScaleDecorator>
-        )}
+        onPressVerb={verb =>
+          navigation.navigate('VerbDetail', { verbId: verb.id })
+        }
+        onReorder={(verbId, toIndex) => verbStore.reorderVerb(verbId, toIndex)}
       />
     </Screen>
   );
@@ -90,14 +80,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  actionsWeb: {
+    justifyContent: 'flex-end',
+  },
   tip: {
     ...serif(12, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),
     flexShrink: 1,
     paddingRight: 12,
-  },
-  emptyWrap: {
-    flexGrow: 1,
-    justifyContent: 'center',
   },
   empty: {
     ...serif(15, {

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageAdapter } from './asyncStorageAdapter';
 import { ConjugationRow, Group, Verb } from '../types';
 import {
   createVerb,
@@ -20,11 +20,6 @@ export const PERSIST_DEBOUNCE_MS = 300;
 export type VerbStorage = {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
-};
-
-export const asyncStorageAdapter: VerbStorage = {
-  getItem: key => AsyncStorage.getItem(key),
-  setItem: (key, value) => AsyncStorage.setItem(key, value),
 };
 
 export type VerbState = {

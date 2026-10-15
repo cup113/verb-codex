@@ -1,0 +1,44 @@
+/*
+ * The same five static instances the Android build bundles. Each weight is its
+ * own family, exactly as on Android, so no style ever sets fontWeight.
+ * The URLs stay relative so Vite fingerprints and emits the binaries.
+ */
+@font-face {
+  font-family: 'NewsreaderRegular';
+  src: url('../assets/fonts/NewsreaderRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NewsreaderMedium';
+  src: url('../assets/fonts/NewsreaderMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NewsreaderItalic';
+  src: url('../assets/fonts/NewsreaderItalic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrainsMonoRegular';
+  src: url('../assets/fonts/JetBrainsMonoRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrainsMonoMedium';
+  src: url('../assets/fonts/JetBrainsMonoMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
