@@ -38,6 +38,7 @@ export type VerbStore = {
   setNote(verbId: string, note: string): void;
   reorderVerb(verbId: string, toIndex: number): Promise<void>;
   removeVerb(verbId: string): Promise<void>;
+  replaceAll(verbs: Verb[]): Promise<void>;
 };
 
 export function createVerbStore(
@@ -226,6 +227,20 @@ export function createVerbStore(
     await writeNow();
   }
 
+  // An import replaces the whole codex in a single write, and marks the seed as
+  // done: a codex that came out of a file must never sprout the demo entries.
+  async function replaceAll(next: Verb[]): Promise<void> {
+    verbs = next;
+    revision++;
+    publish();
+    try {
+      await storage.setItem(SEEDED_KEY, 'true');
+    } catch {
+      // Worst case the seed runs again on an empty codex; never fatal.
+    }
+    await writeNow();
+  }
+
   return {
     subscribe: listener => {
       listeners.add(listener);
@@ -240,6 +255,7 @@ export function createVerbStore(
     setNote,
     reorderVerb,
     removeVerb,
+    replaceAll,
   };
 }
 

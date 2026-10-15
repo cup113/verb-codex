@@ -19,6 +19,7 @@
 | 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义  |
 | 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                       |
 | 长按某行（仅 Android）  | 拿起该行并拖动，在**分组**内重排**次序**；web 上不提供重排（见 [docs/spike-web.md](docs/spike-web.md)）                                  |
+| 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                                              |
 | 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                                |
 | 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键） |
 
@@ -32,7 +33,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：47 个用例，覆盖领域逻辑、存储、行组件、列表页与 App 装配
+npm test               # jest：60 个用例，覆盖领域逻辑（含备份信封）、存储、行组件、列表页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -43,9 +44,10 @@ npm run lint
 App.tsx                     导航装配（native-stack）+ 启动时载入法典、切后台时落盘
 src/types.ts                领域类型、六行代词、分组标签、代词省音
 src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读盘（可单测，无原生依赖）
+src/domain/backup.ts        备份信封：序列化、文件名、容错解析（纯逻辑，可单测）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
-src/platform/               平台分包：删除确认（原生 Alert / web window.confirm）
+src/platform/               平台分包：删除确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）
 src/data/seed.ts            首启的三条示例条目
 src/screens/                列表 / 详情（含自测态）/ 新增
 src/components/             Screen、分组标签、变位行、列表行、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
@@ -54,6 +56,19 @@ index.html                  web 挂载点（#root 必须是 flex 容器，原因
 vite.config.mts             web 构建配置（精确 alias / 扩展名顺序 / optimizeDeps 排除）
 assets/fonts/               字体源文件（构建时同步进 android/app/src/main/assets/fonts）
 ```
+
+### 备份与恢复
+
+列表页标题行右侧的 `Sauvegarde` 进入导出 / 导入。导出文件是一个带格式版本的信封，缩进过、可读也可 diff：
+
+```json
+{ "app": "verbcodex", "format": 1, "exportedAt": "2026-10-15T12:34:56.789Z", "verbs": [ … ] }
+```
+
+- **导入是替换，不是合并**：确认对话框会写明"当前 N 条会被替换"。合并看起来更友好，但它必须先回答"同一条各改了一半听谁的"，而法典的立场是记录由你负责；不可预测的自动合并比明确的替换更糟。
+- **读盘一律容错**：坏条目被丢弃、缺字段补默认值（复用存储层同一套 coercion）；但**格式版本比你新时明确拒绝**，而不是静默导入成空法典——那会让你以为数据还在。
+- **平台差异**：Web 是真文件（下载 / `<input type="file">`）；Android 是分享面板 + 粘贴，因为文件选择器要再加一个原生依赖、再一次四 ABI 编译，这个功能不值当。这条缝在 `src/platform/backupFile{,.web}.ts`。
+- 导出**不会**上传任何东西：这个应用没有后端。
 
 ### 字体
 
@@ -124,7 +139,7 @@ npx vite preview    # 预览构建产物
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（47 个用例）                                                                                                                                   |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（60 个用例）                                                                                                                                   |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |
 

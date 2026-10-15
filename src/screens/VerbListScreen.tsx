@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { Counter, GroupTabs } from '../components/GroupTabs';
@@ -46,6 +46,13 @@ export function VerbListScreen({ navigation }: Props) {
     >
       <View style={styles.header}>
         <Text style={styles.title}>{copy.title}</Text>
+        <Pressable
+          onPress={() => navigation.navigate('Backup')}
+          hitSlop={10}
+          style={styles.backupRow}
+        >
+          <Text style={styles.backupLink}>{copy.backupLink}</Text>
+        </Pressable>
         <Counter shown={shown.length} total={verbs.length} />
       </View>
       <GroupTabs active={group} onChange={setGroup} />
@@ -69,11 +76,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'space-between',
+    // Title takes the slack, so the backup link sits with the counter as one
+    // cluster rather than floating in the middle of the header.
+    gap: 12,
     marginBottom: 20,
   },
   title: {
     ...serif(26, { fontFamily: fonts.serifMedium, letterSpacing: -0.5 }),
+    flex: 1,
+  },
+  backupRow: {
+    paddingVertical: 4,
+  },
+  backupLink: {
+    ...serif(13, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),
   },
   actions: {
     flexDirection: 'row',

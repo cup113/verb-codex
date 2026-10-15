@@ -23,4 +23,28 @@ export const copy = {
   masked: '…',
   noteLabel: 'Notes',
   notePlaceholder: 'Prononciation, usage, remarques…',
+  backupLink: 'Sauvegarde',
+  backupTitle: 'Sauvegarde',
+  exportLabel: 'Exporter',
+  exportHint:
+    'Tout le codex dans un fichier JSON, à garder hors de l’appareil.',
+  exportButton: 'Exporter',
+  exportDone: (count: number) => `${count} entrées exportées.`,
+  importLabel: 'Importer',
+  importHint: 'Collez une sauvegarde, ou choisissez-en le fichier.',
+  importFromFile: 'Choisir un fichier',
+  importPlaceholder: '{ "app": "verbcodex", … }',
+  importButton: 'Importer',
+  importConfirmTitle: 'Remplacer le codex ?',
+  importConfirmBody: (count: number) =>
+    `Le contenu actuel (${count} entrées) sera remplacé par la sauvegarde.`,
+  importConfirm: 'Remplacer',
+  importDone: (count: number) => `${count} entrées importées.`,
+  importProblemEmpty: 'Collez d’abord une sauvegarde.',
+  importProblemJson: 'Ce texte n’est pas du JSON.',
+  importProblemNotBackup:
+    'Ce fichier ne ressemble pas à une sauvegarde du codex.',
+  importProblemNewer:
+    'Cette sauvegarde vient d’une version plus récente de l’application.',
+  importProblemNoVerbs: 'Aucun verbe lisible dans cette sauvegarde.',
 } as const;

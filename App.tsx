@@ -10,6 +10,7 @@ import { verbStore } from './src/storage/verbStore';
 import { VerbListScreen } from './src/screens/VerbListScreen';
 import { VerbDetailScreen } from './src/screens/VerbDetailScreen';
 import { AddVerbScreen } from './src/screens/AddVerbScreen';
+import { BackupScreen } from './src/screens/BackupScreen';
 import type { RootStackParamList } from './src/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -53,6 +54,7 @@ function App() {
           >
             <Stack.Screen name="VerbList" component={VerbListScreen} />
             <Stack.Screen name="VerbDetail" component={VerbDetailScreen} />
+            <Stack.Screen name="Backup" component={BackupScreen} />
             <Stack.Screen
               name="AddVerb"
               component={AddVerbScreen}

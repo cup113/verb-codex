@@ -112,7 +112,7 @@ export function parseVerbs(raw: string | null): Verb[] {
   return parsed.map(coerceVerb).filter((verb): verb is Verb => verb !== null);
 }
 
-function coerceVerb(value: unknown): Verb | null {
+export function coerceVerb(value: unknown): Verb | null {
   if (typeof value !== 'object' || value === null) {
     return null;
   }

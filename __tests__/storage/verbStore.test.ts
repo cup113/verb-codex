@@ -264,4 +264,50 @@ describe('createVerbStore', () => {
     await store.addVerb({ infinitive: 'finir', group: 2 });
     expect(notifications).toBe(1);
   });
+
+  it('replaces the whole codex from an import, writing it out at once', async () => {
+    const { storage, entries } = memoryStorage({ [SEEDED_KEY]: 'true' });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    await store.addVerb({ infinitive: 'aimer', group: 1 });
+    const imported: Verb[] = [
+      { ...seededCodex()[0], id: 'i1', infinitive: 'aller' },
+      { ...seededCodex()[0], id: 'i2', infinitive: 'finir', group: 2 },
+    ];
+
+    await store.replaceAll(imported);
+
+    expect(store.getSnapshot().verbs.map(verb => verb.infinitive)).toEqual([
+      'aller',
+      'finir',
+    ]);
+    expect(persisted(entries).map(verb => verb.infinitive)).toEqual([
+      'aller',
+      'finir',
+    ]);
+  });
+
+  it('marks the seed as done when importing, so a relaunch cannot re-seed', async () => {
+    // Storage that predates the flag: entries but no marker. Without the write
+    // inside replaceAll, the next launch would find an empty codex and seed it.
+    const { storage, entries } = memoryStorage({
+      [VERBS_KEY]: JSON.stringify(seededCodex()),
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    expect(entries.get(SEEDED_KEY)).toBeUndefined();
+
+    await store.replaceAll([]);
+
+    expect(entries.get(SEEDED_KEY)).toBe('true');
+    expect(persisted(entries)).toEqual([]);
+
+    const relaunched = createVerbStore(storage, {
+      ...OPTIONS,
+      seed: seededCodex,
+    });
+    await relaunched.init();
+
+    expect(relaunched.getSnapshot().verbs).toEqual([]);
+  });
 });
