@@ -57,8 +57,29 @@ npx vite preview    # 预览构建产物
 
 一个已知的不完美：react-native-web **不发类型**，所以 web program 只能对着 `react-native` 的类型检查（而非 RNW 自己的 API）。`web/main.tsx` 里 `RootTag` 那一次 `as unknown as` 就是这处缝隙，注释里写明了原因。
 
-## 还没做（若要把 web 当正式目标）
+## 补齐之后（同日更新）
 
-- **没有 favicon / manifest / service worker**：控制台有一条 `favicon.ico 404`；能安装的 PWA 需要 manifest + SW（含 `skipWaiting` / `clientsClaim`）。
-- **导出 / 导入 JSON 是前置条件**：浏览器存储默认 best-effort，`navigator.storage.persist()` 只能挡住 LRU 与存储压力淘汰，**用户主动清理与 InPrivate 挡不住**，Safari 还会在 7 天无交互后主动清理。这同时也解决 Android 换机/卸载丢数据。
-- **CI 还没有 `web` job**：`web:build` 目前只在本地验证过。
+上面列的缺口都做完了，每一条都留了可复现的证据：
+
+- **图标 / manifest / service worker**：`tools/make-icons.py` 现在同时产出 web 图标（`favicon.ico`、`favicon-32`、`apple-touch-icon`、192/512 的 `any` 与 `maskable`）——两次运行 22 个文件 SHA-256 完全一致，且 maskable 主体半径 0.325 < 安全区 0.4，圆形与方圆蒙版下都不切边。manifest 与 SW 由 `vite-plugin-pwa@2` + workbox 7 生成，采用 `registerType: 'prompt'`：**新版本等到应用被完全关闭才接管**，绝不把用户从一次击键下面抽走。
+- **导出 / 导入**：见 [CHANGELOG](../CHANGELOG.md) 的 0.1.0。它同时是 Android 换机 / 卸载丢数据的解药。
+- **CI 的 `web` job**：构建并断言产物真的构成一个 PWA（manifest / `sw.js` / 两种尺寸图标 / 5 个字体），再上传 `dist/` 作为构件。
+
+浏览器实测（Chromium，`vite preview` 服务构建产物）：
+
+| 检查                            | 结果                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `beforeinstallprompt` 是否触发  | ✓ 这是"可安装"的真实信号，不是照着清单勾选                                                              |
+| manifest 取回并解析             | ✓ 200；`display: standalone`；四个图标（含 maskable）                                                   |
+| 7 个图标 / favicon 是否可达     | ✓ 全部 200 且 content-type 正确（那条 `favicon.ico 404` 消失）                                          |
+| SW 注册与接管                   | ✓ 首屏未被接管（prompt 模式不带 `clientsClaim`），第二次加载起 `controller = /sw.js`                    |
+| 缓存条目数                      | 17 条：预缓存清单 22 条，其中 5 条是插件重复列出的 manifest 图标，workbox 按 URL 归并                   |
+| 断网冷启动                      | ✓ 标题与整页文本都在（`screenshots/web/web-21`）                                                        |
+| `navigator.storage.persisted()` | ✗ **false**——Chromium 在 localhost 上不批准，于是备份屏显示"这个浏览器可能不留情面地清掉数据"（web-20） |
+
+最后一条值得单独记住：`persist()` 不是开关，是**申请**。它挡得住 LRU 与存储压力淘汰，挡不住用户主动清理与 InPrivate，Safari 还会在 7 天无交互后主动清理。所以"未获批准时明说风险"比"静默申请"诚实——而这也正是备份屏那句话的存在理由。
+
+## 还没做的
+
+- **Netlify 上的真实部署**：`netlify.toml` 已就位（含 `/sw.js` 必须 `must-revalidate` 这条命门——陈旧 worker 会把新版本永远顶在后面），但域名绑定与仓库授权要在 Netlify 里点，而且 **HTTPS 域名下的 `persist()` 结论必须重新实测**：localhost 上的 false 不代表线上也是 false。
+- **iOS Safari 的 PWA 行为**：存储策略、安装流程与后台回收都与 Chromium 不同，未实测。

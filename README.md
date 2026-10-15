@@ -1,6 +1,6 @@
 # 变位法典 (VerbCodex)
 
-个人法语变位备忘录（Android / React Native；另有一个实验性的 Web 目标，见 [docs/spike-web.md](docs/spike-web.md)）。你亲手把学到的动词和它的六行现在时变位写进法典，之后随时翻看、遮盖自测。
+个人法语变位备忘录（Android / React Native，另有一个可安装的 Web/PWA 目标）。你亲手把学到的动词和它的六行现在时变位写进法典，之后随时翻看、遮盖自测。
 
 原型参照 [demo](demo)（法式纸质笔记风的单页 HTML），本 App 是它的 React Native 重写：同样的纸色、赤陶色词尾、衬线 + 等宽排版，但把"一张卡片"拆成了"一本可以记录、可以翻阅的法典"。
 
@@ -19,7 +19,7 @@
 | 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义  |
 | 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                       |
 | 长按某行（仅 Android）  | 拿起该行并拖动，在**分组**内重排**次序**；web 上不提供重排（见 [docs/spike-web.md](docs/spike-web.md)）                                  |
-| 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                                              |
+| 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                  |
 | 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                                |
 | 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键） |
 
@@ -119,28 +119,42 @@ python tools/make-icons.py     # 需要 Pillow
 - 模拟器若出现黑屏 + `adb devices` 显示 `offline`，多半是陈旧的 quickboot 快照：删 `~/.android/avd/<avd>.avd/snapshots/*` 后用 `-no-snapshot` 启动（`quickbootChoice.ini` 的 `saveOnExit=true` 会让它反复复发）。
 - debug 与 release 是两条路径：debug APK 里没有 `assets/index.android.bundle`（JS 由 Metro 提供），生产管线要用 `./gradlew assembleRelease` 验证。
 
-## Web / PWA（实验性）
+## Web / PWA
 
-`npm run web` 能在浏览器里跑起来，实测除**长按拖动重排**外全部功能可用（列表、分组筛选、详情、附注、新增、自测、删除、持久化），dev 与构建产物渲染逐像素一致。**次序只在 Android 上调整**：web 列表是 `VerbList.web.tsx`，一个不提供重排的普通 `FlatList`。
+`npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。除**长按拖动重排**外全部功能可用（列表、分组筛选、详情、附注、新增、自测、删除、持久化、导出/导入），dev 与构建产物渲染逐像素一致。**次序只在 Android 上调整**：web 列表是 `VerbList.web.tsx`，一个不提供重排的普通 `FlatList`。
 
-完整结论、证据截图与三处平台差异（存储 / 删除确认 / 返回键）见 **[docs/spike-web.md](docs/spike-web.md)**。
+它现在是一个**可安装、可离线**的 PWA（`vite-plugin-pwa` + workbox 7，见 `vite.config.mts`）：manifest 由插件生成，service worker 预缓存 22 项 / 约 2 MB（外壳 + 5 个字体 + 图标），**断网冷启动可用**（`screenshots/web/web-21`）。
 
 ```sh
 npm run web         # Vite dev server（HMR）
 npm run web:build   # 产出 dist/
-npx vite preview    # 预览构建产物
+npx vite preview    # 预览构建产物：service worker 只在构建产物里存在
 ```
 
-尚未完成的部分（favicon、manifest、service worker、导出/导入 JSON、CI 的 `web` job）在 spike 文档末尾逐条列出。
+部署（Netlify）用仓库里的 [`netlify.toml`](netlify.toml)：`npm run web:build` → `dist`，Node 22。两条缓存规则是 PWA 的命门——`/sw.js` 与 manifest 必须 `must-revalidate`（否则新版本会被陈旧 worker 顶住，"下次关掉应用才更新"就永远不成立），而 `/assets/*` 是内容哈希的，可以 `immutable` 长缓存。
+
+### 三处平台差异与一个诚实的提示
+
+| 位置     | Android                                   | Web                                                    |
+| -------- | ----------------------------------------- | ------------------------------------------------------ |
+| 存储     | AsyncStorage（Room/SQLite，永不被系统清） | localStorage；启动时申请 `navigator.storage.persist()` |
+| 删除确认 | `Alert.alert`                             | `window.confirm`（RNW 的 `Alert.alert` 是空函数）      |
+| 返回键   | `BackHandler` 先退自测                    | 无此键；RNW 的桩只会 `console.error`，故不注册         |
+| 备份落地 | 系统分享面板导出 + 粘贴导入               | 真文件下载 / `<input type="file">`                     |
+
+**关于持久化**：`persist()` 不是万能的。实测 Chromium 在 localhost 上直接返回 `false`（它按"安装状态 / 站点参与度"自行决定、不弹窗；Firefox 才会询问），**用户主动清理与 InPrivate 也从来挡不住**。所以当它返回 false 时，备份屏会明说一句"这个浏览器可能不留情面地清掉数据"——[screenshots/web/web-20](screenshots/web/web-20-backup-evictable-warning.png) 就是它出现的样子。这是提示，不是装饰。
+
+完整结论、证据截图与"拖动为何在 web 上不成立"见 **[docs/spike-web.md](docs/spike-web.md)**。
 
 ## CI（GitHub Actions）
 
-`.github/workflows/ci.yml` 三个 job（push / pull_request / workflow_dispatch 触发，同分支的旧运行会被取消）：
+`.github/workflows/ci.yml` 四个 job（push / pull_request / workflow_dispatch 触发，同分支的旧运行会被取消）：
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（60 个用例）                                                                                                                                   |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
+| `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、5 个字体都在），并上传 `dist/` 作为构件                                                                                      |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |
 
 CI 上会把 `gradle-wrapper.properties` 的 `distributionUrl` 临时改回 Gradle 官方地址（本地用腾讯镜像是为了速度），`distributionSha256Sum` 本来就是官方校验和，两边都能验证。

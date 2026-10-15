@@ -1,0 +1,38 @@
+# Netlify. The web target is a static bundle with no backend, so this file is
+# short on purpose: where to build from, what Node to build with, and the two
+# cache rules a PWA actually depends on.
+
+[build]
+  command = "npm run web:build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 needs Node >= 20.19 (package.json allows >= 22.11), so pin the major
+  # rather than inherit whatever the image defaults to.
+  NODE_VERSION = "22"
+
+# A service worker must never be served stale: a cached worker can keep a new
+# version waiting behind it for as long as the cache lives. This is the one
+# header that makes "the next time you close the app" actually mean something.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# The manifest is what the install prompt reads, so it deserves the same.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Everything under /assets is content-hashed by Vite, so it can be cached for
+# as long as the browser is willing. Without this Netlify's default
+# (max-age=0, must-revalidate) makes every visit re-fetch the 900 kB bundle.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# No redirects on purpose. The app has no routes, so an unknown path returning
+# Netlify's 404 is more honest than a 200 that renders the app — and the service
+# worker's navigateFallback is scoped to `/` for the same reason.

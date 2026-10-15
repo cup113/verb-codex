@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +20,7 @@ import {
 } from '../domain/backup';
 import { backupFile } from '../platform/backupFile';
 import { confirmDestructive } from '../platform/confirmDestructive';
+import { requestPersistentStorage } from '../platform/persistentStorage';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
@@ -41,6 +42,21 @@ export function BackupScreen({ navigation }: Props) {
   const [status, setStatus] = useState<{ good: boolean; text: string } | null>(
     null,
   );
+  // Android's storage is not evictable, so this is true there and the warning
+  // below never appears; on the web it says whether the export is the only copy.
+  const [persisted, setPersisted] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    requestPersistentStorage().then(value => {
+      if (live) {
+        setPersisted(value);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const exportCodex = async () => {
     const exportedAt = new Date().toISOString();
@@ -105,6 +121,9 @@ export function BackupScreen({ navigation }: Props) {
           <View style={styles.card}>
             <Text style={styles.label}>{copy.exportLabel}</Text>
             <Text style={styles.hint}>{copy.exportHint}</Text>
+            {persisted ? null : (
+              <Text style={styles.problem}>{copy.exportEvictable}</Text>
+            )}
             <View style={styles.action}>
               <OutlinedButton
                 label={copy.exportButton}

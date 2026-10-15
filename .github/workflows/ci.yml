@@ -35,6 +35,47 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --ci
 
+  web:
+    name: Web bundle
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run web:build
+
+      # Assert what the browser's install criteria actually look at, rather
+      # than that the build merely exited zero.
+      - name: Verify the bundle is a complete PWA
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/icons/maskable-512.png
+          grep -q 'rel="manifest"' dist/index.html
+          grep -q '"purpose":"maskable"' dist/manifest.webmanifest
+          # The fonts are part of the look: if they stopped being emitted, the
+          # installed app would render in a fallback face and nobody would see
+          # it until someone opened the installed app.
+          test "$(ls dist/assets/*.ttf | wc -l)" -eq 5
+          echo "web bundle: $(du -sh dist | cut -f1)"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: verbcodex-web
+          if-no-files-found: error
+          retention-days: 14
+          path: dist
+
   android:
     name: Android release build
     runs-on: ubuntu-24.04
@@ -131,8 +172,14 @@ jobs:
     runs-on: ubuntu-24.04
     # Release assets are the only thing that needs write access, so the token
     # stays read-only everywhere else.
+    #
+    # `actions: read` is not optional: listing or downloading a run's artifacts
+    # goes through the actions API, and the moment any scope is named here every
+    # unnamed one becomes `none` — which is what turned `gh run download` into
+    # "HTTP 403: Resource not accessible by integration".
     permissions:
       contents: write
+      actions: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

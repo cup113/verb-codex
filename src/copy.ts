@@ -28,6 +28,8 @@ export const copy = {
   exportLabel: 'Exporter',
   exportHint:
     'Tout le codex dans un fichier JSON, à garder hors de l’appareil.',
+  exportEvictable:
+    'Ce navigateur peut effacer ces données sans prévenir : gardez un export.',
   exportButton: 'Exporter',
   exportDone: (count: number) => `${count} entrées exportées.`,
   importLabel: 'Importer',

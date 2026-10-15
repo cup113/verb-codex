@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate every Android launcher icon from favicon.jpg.
+"""Generate every application icon — Android launcher and web/PWA — from favicon.jpg.
 
 Run from the repo root:  python tools/make-icons.py
 
@@ -25,6 +25,20 @@ thresholding the whole image on colour: the illustration's collar has a green
 trim that is close to the background but is a *separate* region, and a global
 threshold would punch holes in it.
 
+The same run also writes the web/PWA icons into `public/`, so both platforms
+stay in step and the artwork is never edited twice:
+
+* `icons/icon-{192,512}.png` — `purpose: any`. Full-bleed and square: with no
+  mask promised, the artwork's own background is the frame.
+* `icons/maskable-{192,512}.png` — `purpose: maskable`. Here a mask *is*
+  promised, so this reuses the adaptive icon's composition: opaque to every
+  edge and the subject inside the safe circle. A maskable icon with transparent
+  corners is the classic mistake — the mask crops, and what shows through is not
+  the artwork.
+* `apple-touch-icon.png` — 180px, opaque square. iOS rounds it itself, and
+  renders transparency as black.
+* `favicon.ico` (16/32/48) and `favicon-32.png`.
+
 Requires Pillow (`pip install pillow`).
 """
 
@@ -34,6 +48,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RES = ROOT / "android/app/src/main/res"
+PUBLIC = ROOT / "public"
 SOURCE = ROOT / "favicon.jpg"
 PREVIEW = ROOT / "screenshots/icon-preview.png"
 
@@ -111,6 +126,13 @@ def centred(subject: Image.Image, canvas: int, scale: float) -> Image.Image:
     return layer
 
 
+def maskable(subject: Image.Image, background, size: int, scale: float) -> Image.Image:
+    """Opaque to every edge, subject inside the safe circle."""
+    layer = Image.new("RGBA", (size, size), background + (255,))
+    layer.alpha_composite(centred(subject, size, scale))
+    return layer
+
+
 ADAPTIVE_XML = (
     '<?xml version="1.0" encoding="utf-8"?>\n'
     '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
@@ -161,6 +183,24 @@ def main() -> None:
         newline="\n",
     )
     print("wrote mipmap-anydpi-v26/*.xml and values/colors.xml")
+
+    # --- web / PWA ---------------------------------------------------------
+    icons = PUBLIC / "icons"
+    icons.mkdir(parents=True, exist_ok=True)
+    for size in (192, 512):
+        # `any`: no mask promised, so the artwork's background is the frame.
+        shaped(flat, size, "square", 0.0).convert("RGB").save(icons / f"icon-{size}.png")
+        # `maskable`: a mask is promised, so stay opaque and inside the circle.
+        maskable(subject, background, size, scale).convert("RGB").save(
+            icons / f"maskable-{size}.png"
+        )
+    # iOS masks it itself and turns transparency into black.
+    shaped(flat, 180, "square", 0.0).convert("RGB").save(PUBLIC / "apple-touch-icon.png")
+    shaped(flat, 32, "square", 0.0).convert("RGB").save(PUBLIC / "favicon-32.png")
+    shaped(flat, 48, "square", 0.0).convert("RGB").save(
+        PUBLIC / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)]
+    )
+    print("wrote public/{icons/icon-*,icons/maskable-*,apple-touch-icon.png,favicon-32.png,favicon.ico}")
 
     # Side-by-side preview of the three variants, so the result can be eyeballed.
     size = 288

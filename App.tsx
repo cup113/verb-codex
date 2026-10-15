@@ -11,6 +11,7 @@ import { VerbListScreen } from './src/screens/VerbListScreen';
 import { VerbDetailScreen } from './src/screens/VerbDetailScreen';
 import { AddVerbScreen } from './src/screens/AddVerbScreen';
 import { BackupScreen } from './src/screens/BackupScreen';
+import { requestPersistentStorage } from './src/platform/persistentStorage';
 import type { RootStackParamList } from './src/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,6 +31,9 @@ const paperTheme: Theme = {
 function App() {
   useEffect(() => {
     verbStore.init();
+    // A no-op on Android, an actual request on the web: browser storage is
+    // best-effort unless the origin asks otherwise.
+    requestPersistentStorage();
     // A memo must survive being swiped away: flush pending keystrokes when the
     // app stops being the foreground app.
     const subscription = AppState.addEventListener('change', state => {

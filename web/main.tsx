@@ -1,4 +1,5 @@
 import { AppRegistry, type RootTag } from 'react-native';
+import { registerSW } from 'virtual:pwa-register';
 import App from '../App';
 import app from '../app.json';
 import './fonts.css';
@@ -21,3 +22,8 @@ AppRegistry.runApplication(app.name, {
   // against.
   rootTag: rootTag as unknown as RootTag,
 });
+
+// Offline support. Deliberately without an update prompt: a new version waits
+// until the app is fully closed, so a reload can never eat a keystroke.
+// Rationale and the `registerType` it mirrors are in vite.config.mts.
+registerSW({ immediate: true });
