@@ -18,9 +18,9 @@ jobs:
     name: Lint, types and tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -39,9 +39,9 @@ jobs:
       # inside `if:` expressions, while `env` is.
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -49,17 +49,22 @@ jobs:
       # React Native 0.87's own Gradle plugin asks for jvmToolchain(17), and
       # Gradle matches a toolchain request strictly: a newer JDK does not
       # satisfy it, so the build JDK here is 17 and not "17+".
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # v3's default `packages` still asked for the legacy `tools` package,
+      # which no longer exists in Google's SDK index, so sdkmanager exited 1.
+      # v4 defaults to platform-tools; naming it keeps that explicit.
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       - name: Install the NDK and CMake this project pins
         run: sdkmanager --install "ndk;27.1.12297006" "cmake;3.22.1"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - run: npm ci
 
@@ -103,7 +108,7 @@ jobs:
           unzip -l "$apk" | grep -q 'assets/index.android.bundle'
           echo "$apk carries assets/index.android.bundle"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: verbcodex-release
           if-no-files-found: error
