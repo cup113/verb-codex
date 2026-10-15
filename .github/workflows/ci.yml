@@ -2,6 +2,11 @@ name: CI
 
 on:
   push:
+    # A branch push runs the checks and the build. A v* tag does the same and
+    # then publishes the builds to a GitHub Release, whose assets do not
+    # expire the way workflow artifacts do.
+    branches: ['**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -116,3 +121,46 @@ jobs:
           path: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
+
+  release:
+    name: Publish to a Release
+    # Only for a version tag, and only once the build of that same commit is
+    # green — `android` already depends on `js`, so this covers everything.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: android
+    runs-on: ubuntu-24.04
+    # Release assets are the only thing that needs write access, so the token
+    # stays read-only everywhere else.
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Fetch the builds this run produced
+        run: |
+          set -euo pipefail
+          # Downloads the artifact's own layout: apk/release, bundle/release.
+          gh run download "$GITHUB_RUN_ID" --name verbcodex-release --dir builds
+          find builds -type f -printf '%p %s bytes\n'
+
+      - name: Name the assets after the tag
+        run: |
+          set -euo pipefail
+          mv builds/apk/release/app-release.apk "verbcodex-${GITHUB_REF_NAME}.apk"
+          mv builds/bundle/release/app-release.aab "verbcodex-${GITHUB_REF_NAME}.aab"
+          ls -l verbcodex-*
+
+      - name: Create or update the release
+        run: |
+          set -euo pipefail
+          # Re-running an existing tag must not fail the build.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" verbcodex-* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              verbcodex-*
+          fi
