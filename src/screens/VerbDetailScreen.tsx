@@ -144,6 +144,23 @@ export function VerbDetailScreen({ route, navigation }: Props) {
               ))}
             </View>
           </View>
+          {testing ? null : (
+            <View style={styles.noteCard}>
+              <Text style={styles.noteLabel}>{copy.noteLabel}</Text>
+              <TextInput
+                style={styles.noteInput}
+                value={verb.note}
+                onChangeText={text => verbStore.setNote(verb.id, text)}
+                placeholder={copy.notePlaceholder}
+                placeholderTextColor={colors.line}
+                multiline
+                textAlignVertical="top"
+                maxLength={2000}
+                autoCorrect
+                underlineColorAndroid="transparent"
+              />
+            </View>
+          )}
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
@@ -197,6 +214,24 @@ const styles = StyleSheet.create({
   },
   grid: {
     gap: 12,
+  },
+  noteCard: {
+    ...cardSurface,
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  noteLabel: {
+    ...mono(10, { letterSpacing: 1.2, textTransform: 'uppercase' }),
+    marginBottom: 8,
+  },
+  // Prose, so the serif rather than the grid's mono; no fixed height, it
+  // grows with the note and the screen's ScrollView does the scrolling.
+  noteInput: {
+    ...serif(15, { lineHeight: 22 }),
+    minHeight: 96,
+    padding: 0,
+    margin: 0,
   },
   actions: {
     flexDirection: 'row',

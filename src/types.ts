@@ -13,6 +13,12 @@ export type Verb = {
   group: Group;
   tense: Tense;
   rows: ConjugationRow[];
+  /**
+   * The user's own free-form annotation (pronunciation, usage, whatever they
+   * want to remember). The codex never interprets it — like every other field,
+   * it is recorded text and nothing more.
+   */
+  note: string;
   createdAt: number;
   updatedAt: number;
 };

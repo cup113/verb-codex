@@ -16,6 +16,7 @@ export function createVerb(args: {
     group: args.group,
     tense: 'present',
     rows: emptyRows(),
+    note: '',
     createdAt: args.now,
     updatedAt: args.now,
   };
@@ -48,6 +49,10 @@ export function withInfinitive(
   now: number,
 ): Verb {
   return { ...verb, infinitive, updatedAt: now };
+}
+
+export function withNote(verb: Verb, note: string, now: number): Verb {
+  return { ...verb, note, updatedAt: now };
 }
 
 /** Local-only identifier: collisions need uniqueness, not cryptography. */
@@ -98,6 +103,7 @@ function coerceVerb(value: unknown): Verb | null {
     group,
     tense: 'present',
     rows: coerceRows(candidate.rows),
+    note: typeof candidate.note === 'string' ? candidate.note : '',
     createdAt,
     updatedAt:
       typeof candidate.updatedAt === 'number' ? candidate.updatedAt : createdAt,

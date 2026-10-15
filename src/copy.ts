@@ -21,4 +21,6 @@ export const copy = {
   deleteBody: 'Cette entrée et ses six lignes seront effacées.',
   longPressHint: 'Appui long pour supprimer',
   masked: '…',
+  noteLabel: 'Notes',
+  notePlaceholder: 'Prononciation, usage, remarques…',
 } as const;

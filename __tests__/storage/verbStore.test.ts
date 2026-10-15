@@ -36,6 +36,7 @@ function seededCodex(): Verb[] {
       rows: emptyRows().map((row, index) =>
         index === 0 ? { stem: 'aim', ending: 'e' } : row,
       ),
+      note: '',
       createdAt: 0,
       updatedAt: 0,
     },
@@ -95,6 +96,7 @@ describe('createVerbStore', () => {
     expect(verb.infinitive).toBe('finir');
     expect(verb.group).toBe(2);
     expect(verb.rows).toEqual(emptyRows());
+    expect(verb.note).toBe('');
     expect(persisted(entries)).toHaveLength(1);
   });
 
@@ -184,6 +186,18 @@ describe('createVerbStore', () => {
     await store.flush();
 
     expect(persisted(entries)[0].infinitive).toBe('aimer');
+  });
+
+  it('persists a free-form note, accents included', async () => {
+    const { storage, entries } = memoryStorage({ [SEEDED_KEY]: 'true' });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+
+    store.setNote(verb.id, 'prononciation : èmé');
+    await store.flush();
+
+    expect(persisted(entries)[0].note).toBe('prononciation : èmé');
   });
 
   it('ignores edits addressed to an entry that is gone', async () => {

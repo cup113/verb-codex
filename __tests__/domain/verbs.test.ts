@@ -5,11 +5,67 @@ import {
   nextVerbId,
   parseVerbs,
   withInfinitive,
+  withNote,
   withRow,
 } from '../../src/domain/verbs';
 import { PRONOUNS, ROW_COUNT, pronounFor } from '../../src/types';
 
 const NOW = 1_700_000_000_000;
+
+describe('notes', () => {
+  it('starts empty, so recording one is always an explicit act', () => {
+    const verb = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
+    expect(verb.note).toBe('');
+  });
+
+  it('replaces the note, stamps the update, and leaves the original alone', () => {
+    const verb = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
+    const noted = withNote(verb, 'je / tu / il → -e', NOW + 5);
+
+    expect(noted.note).toBe('je / tu / il → -e');
+    expect(noted.updatedAt).toBe(NOW + 5);
+    expect(verb.note).toBe('');
+  });
+
+  it('loads entries that were recorded before notes existed', () => {
+    const legacy = JSON.stringify([
+      {
+        id: 'old',
+        infinitive: 'aimer',
+        group: 1,
+        rows: [{ stem: 'aim', ending: 'e' }],
+      },
+    ]);
+
+    const [verb] = parseVerbs(legacy);
+
+    expect(verb.note).toBe('');
+    expect(verb.rows).toHaveLength(ROW_COUNT);
+  });
+
+  it('keeps a recorded note verbatim, accents and all', () => {
+    const kept = JSON.stringify([
+      {
+        id: 'n1',
+        infinitive: 'aimer',
+        group: 1,
+        note: 'prononciation : èmé',
+        rows: [],
+      },
+    ]);
+    expect(parseVerbs(kept)[0].note).toBe('prononciation : èmé');
+  });
+});
 
 describe('createVerb', () => {
   it('starts every entry with six blank rows', () => {

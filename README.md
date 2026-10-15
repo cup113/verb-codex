@@ -6,7 +6,7 @@
 
 ## 它是什么，不是什么
 
-- **是**一本记录本：收录动词、逐格手填**词干**与**词尾**，查看为主、自测为辅。
+- **是**一本记录本：收录动词、逐格手填**词干**与**词尾**、另写一段自由**附注**，查看为主、自测为辅。
 - **不是**词典或判分器：法典不懂法语，不生成变位、不校验对错、不评分。自测只能"遮盖 + 点击揭晓"，比对对象是你自己写下的记录（见 [ADR 0001](docs/adr/0001-manual-memo-no-engine.md)）。
 - 完整术语（动词条目 / 词干 / 词尾 / 分组 / 自测 / 记录值）见 [CONTEXT.md](CONTEXT.md)。
 
@@ -16,6 +16,7 @@
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | 列表页三条分组标签 | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位 |
 | 点击某行           | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                              |
+| 详情页「Notes」    | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                    |
 | 长按某行           | 确认后删除该条目                                                                                                                      |
 | 「+ Nouveau」      | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                             |
 | 「S'entraîner」    | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面                                        |
@@ -30,7 +31,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：36 个用例，覆盖领域逻辑、存储、行组件、列表页与 App 装配
+npm test               # jest：41 个用例，覆盖领域逻辑、存储、行组件、列表页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -58,6 +59,20 @@ JetBrainsMonoRegular / JetBrainsMonoMedium
 ```
 
 之所以不用 Google Fonts 的变体字体（`Newsreader[opsz,wght].ttf`）：资产目录加载拿不到变体轴，`fontWeight: 500` 会静默退化成默认字重。静态实例来自上游 [productiontype/NewsReader](https://github.com/productiontype/NewsReader)（`fonts/static/ttf`，OFL）与 [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono) v2.304（OFL）。
+
+### 图标
+
+应用图标由 [favicon.jpg](favicon.jpg)（1194²、鼠尾草绿底 `#ABBD95`）生成。换图后重新生成，别手工替换 `mipmap-*` 里的 PNG：
+
+```sh
+python tools/make-icons.py     # 需要 Pillow
+```
+
+脚本同时产出三套并写出 `screenshots/icon-preview.png` 供肉眼确认：
+
+- **自适应图标**（API 26+，即绝大多数设备）：`mipmap-anydpi-v26/ic_launcher{,_round}.xml` = 纯色底 `@color/ic_launcher_background` + 透明前景层。前景缩放由**实测**的主体半径算出（实测 0.388 → 缩放 0.838），确保落在 72dp 安全圆内，圆形/方圆/水滴蒙版都不会切断主体。
+- **传统方形/圆形**（minSdk 24，API 24/25 仍需要）：全出血，形状直接烘焙进 PNG。
+- 抠背景用"从边框 flood fill"而不是全局色阈：插画领口那道绿边与底色接近但**不连通**，全局阈值会把它一起抹掉。
 
 ### Android 构建要点（Windows）
 

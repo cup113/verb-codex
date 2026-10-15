@@ -6,6 +6,7 @@ import {
   nextVerbId,
   parseVerbs,
   withInfinitive,
+  withNote,
   withRow,
 } from '../domain/verbs';
 import { seedVerbs } from '../data/seed';
@@ -38,6 +39,7 @@ export type VerbStore = {
   addVerb(input: { infinitive: string; group: Group }): Promise<Verb>;
   setRow(verbId: string, index: number, patch: Partial<ConjugationRow>): void;
   setInfinitive(verbId: string, infinitive: string): void;
+  setNote(verbId: string, note: string): void;
   removeVerb(verbId: string): Promise<void>;
 };
 
@@ -184,6 +186,24 @@ export function createVerbStore(
     schedulePersist();
   }
 
+  function setNote(verbId: string, note: string): void {
+    const timestamp = now();
+    let found = false;
+    verbs = verbs.map(verb => {
+      if (verb.id !== verbId) {
+        return verb;
+      }
+      found = true;
+      return withNote(verb, note, timestamp);
+    });
+    if (!found) {
+      return;
+    }
+    revision++;
+    publish();
+    schedulePersist();
+  }
+
   async function removeVerb(verbId: string): Promise<void> {
     const next = verbs.filter(verb => verb.id !== verbId);
     if (next.length === verbs.length) {
@@ -206,6 +226,7 @@ export function createVerbStore(
     addVerb,
     setRow,
     setInfinitive,
+    setNote,
     removeVerb,
   };
 }
