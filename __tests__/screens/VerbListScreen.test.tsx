@@ -118,6 +118,6 @@ describe('VerbListScreen', () => {
       tree.root.findByProps({ label: copy.newVerb }).props.onPress();
     });
 
-    expect(navigation.navigate).toHaveBeenCalledWith('AddVerb');
+    expect(navigation.navigate).toHaveBeenCalledWith('AddVerb', { group: 1 });
   });
 });

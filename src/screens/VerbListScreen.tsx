@@ -39,7 +39,7 @@ export function VerbListScreen({ navigation }: Props) {
           )}
           <OutlinedButton
             label={copy.newVerb}
-            onPress={() => navigation.navigate('AddVerb')}
+            onPress={() => navigation.navigate('AddVerb', { group })}
           />
         </View>
       }

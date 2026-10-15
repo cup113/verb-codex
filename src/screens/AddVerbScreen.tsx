@@ -20,9 +20,11 @@ import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddVerb'>;
 
-export function AddVerbScreen({ navigation }: Props) {
+export function AddVerbScreen({ navigation, route }: Props) {
   const [infinitive, setInfinitive] = useState('');
-  const [group, setGroup] = useState<Group>(1);
+  // Recording starts in the group the list was showing, so the common case
+  // needs no second tap; the choice stays editable below.
+  const [group, setGroup] = useState<Group>(route.params.group);
   const canCreate = infinitive.trim() !== '';
 
   // Recording lands straight on the entry, with its six rows still blank.
