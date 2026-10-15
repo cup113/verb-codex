@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Carnet de Conjugaison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- 引入优雅的法式衬线体与高辨识度等宽字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-paper: #F6F2EB;
+      --bg-card: #FAF8F5;
+      --ink-primary: #2A2421;
+      --ink-secondary: #8E8278;
+      --accent-terracotta: #B95D38;
+      --line-subtle: #E6DFD5;
+      --font-serif: 'Newsreader', Garamond, Georgia, serif;
+      --font-mono: 'JetBrains Mono', Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #EAE5DC;
+      color: var(--ink-primary);
+      font-family: var(--font-serif);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* 手机主容器模拟器 */
+    .app-container {
+      width: 100%;
+      max-width: 414px;
+      background-color: var(--bg-paper);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(42, 36, 33, 0.08);
+      padding: 28px 24px;
+    }
+
+    /* 顶部标题与轻盈的副标题 */
+    header {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--ink-primary);
+    }
+
+    .counter {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-secondary);
+    }
+
+    /* 分类标签卡（图书馆索引卡风格） */
+    .tabs-index {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--line-subtle);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-style: italic;
+      color: var(--ink-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      color: var(--ink-primary);
+      font-weight: 500;
+      font-style: normal;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -9px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--accent-terracotta);
+    }
+
+    /* 主动词卡片 */
+    .verb-hero {
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      padding: 20px 20px 24px;
+      box-shadow: 0 2px 8px rgba(42, 36, 33, 0.03);
+      border: 1px solid rgba(230, 223, 213, 0.6);
+      margin-bottom: 24px;
+    }
+
+    .verb-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 18px;
+      border-bottom: 1px dashed var(--line-subtle);
+      padding-bottom: 12px;
+    }
+
+    .infinitive {
+      font-size: 24px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .tense-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-secondary);
+    }
+
+    /* 核心：变位无网格悬挂对齐排版 */
+    .conjugation-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .conj-row {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 15px;
+    }
+
+    .pronoun {
+      text-align: right;
+      padding-right: 18px;
+      color: var(--ink-secondary);
+      font-size: 13px;
+      user-select: none;
+    }
+
+    /* 沉浸式手写输入行 */
+    .conjugated-input-box {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px dashed transparent;
+      transition: border-color 0.2s ease;
+    }
+
+    .conjugated-input-box:focus-within {
+      border-bottom: 1px dashed var(--accent-terracotta);
+    }
+
+    .input-stem {
+      color: var(--ink-primary);
+    }
+
+    .input-ending {
+      color: var(--accent-terracotta);
+      font-weight: 500;
+    }
+
+    /* 可编辑字段重置 */
+    .editable {
+      outline: none;
+      min-width: 20px;
+      display: inline-block;
+    }
+
+    /* 底部极简操作栏 */
+    .action-bar {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+    }
+
+    .btn-add {
+      background: none;
+      border: 1px solid var(--ink-primary);
+      color: var(--ink-primary);
+      padding: 10px 18px;
+      font-family: var(--font-serif);
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-add:active {
+      background-color: var(--ink-primary);
+      color: var(--bg-paper);
+    }
+
+    .memo-tip {
+      font-size: 12px;
+      color: var(--ink-secondary);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- 顶部 -->
+    <header>
+      <h1>Verbes</h1>
+      <span class="counter">01 / 24</span>
+    </header>
+
+    <!-- 三分类卡片索引 -->
+    <nav class="tabs-index">
+      <button class="tab-btn active" onclick="switchGroup(this, 1)">1<sup>er</sup> Groupe (-er)</button>
+      <button class="tab-btn" onclick="switchGroup(this, 2)">2<sup>e</sup> (-ir)</button>
+      <button class="tab-btn" onclick="switchGroup(this, 3)">3<sup>e</sup> (Irrégulier)</button>
+    </nav>
+
+    <!-- 变位展示卡 -->
+    <main class="verb-hero">
+      <div class="verb-header">
+        <span class="infinitive" id="verbInfinitive">aimer</span>
+        <span class="tense-tag">Présent</span>
+      </div>
+
+      <div class="conjugation-grid" id="conjugationGrid">
+        <!-- 每一行动词变位 -->
+        <div class="conj-row">
+          <span class="pronoun">j'</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">e</span>
+          </div>
+        </div>
+
+        <div class="conj-row">
+          <span class="pronoun">tu</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">es</span>
+          </div>
+        </div>
+
+        <div class="conj-row">
+          <span class="pronoun">il / elle</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">e</span>
+          </div>
+        </div>
+
+        <div class="conj-row">
+          <span class="pronoun">nous</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">ons</span>
+          </div>
+        </div>
+
+        <div class="conj-row">
+          <span class="pronoun">vous</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">ez</span>
+          </div>
+        </div>
+
+        <div class="conj-row">
+          <span class="pronoun">ils / elles</span>
+          <div class="conjugated-input-box">
+            <span class="input-stem">aim</span>
+            <span class="input-ending editable" contenteditable="true" spellcheck="false">ent</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部操作 -->
+    <footer class="action-bar">
+      <span class="memo-tip">Touchez pour modifier</span>
+      <button class="btn-add" onclick="addNewVerb()">+ Nouveau</button>
+    </footer>
+  </div>
+
+  <script>
+    // 标签切换交互
+    function switchGroup(el, groupNum) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      el.classList.add('active');
+
+      const title = document.getElementById('verbInfinitive');
+      if(groupNum === 1) {
+        title.innerText = 'aimer';
+        renderConjugation('aim', ['e', 'es', 'e', 'ons', 'ez', 'ent']);
+      } else if(groupNum === 2) {
+        title.innerText = 'finir';
+        renderConjugation('fin', ['is', 'is', 'it', 'issons', 'issez', 'issent']);
+      } else {
+        title.innerText = 'aller';
+        renderConjugation('', ['vais', 'vas', 'va', 'allons', 'allez', 'vont']);
+      }
+    }
+
+    function renderConjugation(stem, endings) {
+      const rows = document.querySelectorAll('.conj-row');
+      endings.forEach((ending, idx) => {
+        const stemEl = rows[idx].querySelector('.input-stem');
+        const endingEl = rows[idx].querySelector('.input-ending');
+        stemEl.innerText = stem;
+        endingEl.innerText = ending;
+      });
+    }
+
+    function addNewVerb() {
+      const newVerb = prompt('Entrez un verbe à l\'infinitif (动词原形):', '');
+      if (newVerb) {
+        document.getElementById('verbInfinitive').innerText = newVerb.trim();
+        // 清空词尾等待输入
+        document.querySelectorAll('.input-stem').forEach(s => s.innerText = '');
+        document.querySelectorAll('.input-ending').forEach(e => e.innerText = '...');
+      }
+    }
+  </script>
+</body>
+</html>

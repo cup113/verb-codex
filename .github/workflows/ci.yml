@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch makes the previous run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  js:
+    name: Lint, types and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --ci
+
+  android:
+    name: Android release build
+    runs-on: ubuntu-24.04
+    needs: js
+    env:
+      # Declared at job level because the `secrets` context is not available
+      # inside `if:` expressions, while `env` is.
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # React Native 0.87's own Gradle plugin asks for jvmToolchain(17), and
+      # Gradle matches a toolchain request strictly: a newer JDK does not
+      # satisfy it, so the build JDK here is 17 and not "17+".
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install the NDK and CMake this project pins
+        run: sdkmanager --install "ndk;27.1.12297006" "cmake;3.22.1"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # The wrapper points at a mirror because that is the fast one from the
+      # development machine; CI takes the official distribution instead. The
+      # pinned sha256 is the official one, so it verifies either way.
+      - name: Point the wrapper at the official Gradle distribution
+        run: |
+          sed -i 's#^distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip#' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          grep '^distributionUrl' android/gradle/wrapper/gradle-wrapper.properties
+
+      # Optional: with no keystore secret the release build stays debug-signed,
+      # which still produces an installable artifact. See README for the four
+      # secrets that switch this to real signing.
+      - name: Configure release signing
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "VERBCODEX_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "VERBCODEX_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "VERBCODEX_KEY_ALIAS=$KEY_ALIAS"
+            echo "VERBCODEX_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK and AAB
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease bundleRelease
+
+      # A debug APK carries no JS bundle because Metro serves it at runtime; a
+      # release APK must carry one. This is the check that tells the two apart.
+      - name: Verify the APK is self-contained
+        run: |
+          set -euo pipefail
+          apk=$(ls android/app/build/outputs/apk/release/*.apk)
+          unzip -l "$apk" | grep -q 'assets/index.android.bundle'
+          echo "$apk carries assets/index.android.bundle"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verbcodex-release
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab

@@ -1,0 +1,9 @@
+# The reference artifact this app was ported from: keep it byte-identical.
+demo
+
+# Gradle, native and generated trees.
+android
+screenshots
+
+# Hand-formatted and validated with actionlint instead.
+.github
