@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextInput } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { ConjugationRowView } from '../../src/components/ConjugationRowView';
 import { copy } from '../../src/copy';
@@ -103,5 +103,78 @@ describe('ConjugationRowView', () => {
     expect(texts(elided.tree)).toContain("j'");
     expect(texts(consonant.tree)).toContain('je');
     expect(texts(plural.tree)).toContain('nous');
+  });
+});
+
+/** The invisible copy of the stem the web measures the field from. */
+function measuredCopy(tree: ReactTestRenderer.ReactTestRenderer) {
+  return tree.root.findAll(
+    node => node.type === Text && node.props.onLayout !== undefined,
+  );
+}
+
+describe('ConjugationRowView on the web', () => {
+  // Jest runs the native program, so the web branch has to be asked for. A bare
+  // <input> there takes the browser's default width instead of its text's, and
+  // that is the whole reason the copy below exists.
+  const nativeOS = Platform.OS;
+
+  beforeEach(() => {
+    Platform.OS = 'web';
+  });
+
+  afterEach(() => {
+    Platform.OS = nativeOS;
+  });
+
+  it('lays the stem out as text until it has a width to pin', () => {
+    const { tree } = render();
+    const [copyOfStem] = measuredCopy(tree);
+
+    expect(copyOfStem).toBeDefined();
+    expect(copyOfStem.props.children).toBe('aim');
+    // In flow, so the very first paint already hugs the text...
+    expect(StyleSheet.flatten(copyOfStem.props.style).position).toBeUndefined();
+    // ...and no stem field yet (the ending is the row's only one), so nothing
+    // can show the browser's default width before the measurement lands.
+    const inputs = tree.root.findAllByType(TextInput);
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].props.value).toBe('e');
+  });
+
+  it('gives an empty stem a copy too, so a blank row still measures', () => {
+    const { tree } = render({ row: { stem: '', ending: '' } });
+
+    expect(measuredCopy(tree)[0].props.children).toBe(' ');
+  });
+
+  it('pins the stem field to the width that copy reports', () => {
+    const { tree } = render();
+
+    ReactTestRenderer.act(() =>
+      measuredCopy(tree)[0].props.onLayout({
+        nativeEvent: { layout: { width: 41.4 } },
+      }),
+    );
+
+    const [stem, ending] = tree.root.findAllByType(TextInput);
+    expect(StyleSheet.flatten(stem.props.style).width).toBe(44);
+    expect(ending.props.value).toBe('e');
+    // The copy steps behind the field, invisible but still laid out — still
+    // measuring, this time as the text changes under the user's fingers.
+    const [copyOfStem] = measuredCopy(tree);
+    expect(StyleSheet.flatten(copyOfStem.props.style).opacity).toBe(0);
+    expect(StyleSheet.flatten(copyOfStem.props.style).position).toBe(
+      'absolute',
+    );
+  });
+
+  it('leaves the fields alone where the platform measures them itself', () => {
+    Platform.OS = 'ios';
+    const { tree } = render();
+
+    expect(measuredCopy(tree)).toHaveLength(0);
+    const [stem] = tree.root.findAllByType(TextInput);
+    expect(StyleSheet.flatten(stem.props.style).width).toBeUndefined();
   });
 });

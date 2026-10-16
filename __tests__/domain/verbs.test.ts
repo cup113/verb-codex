@@ -5,9 +5,11 @@ import {
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
+  sharedStem,
   withInfinitive,
   withNote,
   withRow,
+  withSharedStem,
 } from '../../src/domain/verbs';
 import { PRONOUNS, ROW_COUNT, pronounFor } from '../../src/types';
 
@@ -164,6 +166,93 @@ describe('filledCount', () => {
     verb = withRow(verb, 3, { stem: 'all' }, NOW + 2);
 
     expect(filledCount(verb)).toBe(2);
+  });
+
+  it('counts nothing while the entry carries only its shared radical', () => {
+    // The radical is written once for six rows, so "something is written"
+    // would report a whole conjugation before a single ending exists.
+    const verb = withSharedStem(
+      createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW }),
+      'aim',
+      NOW + 1,
+    );
+
+    expect(verb.rows.every(row => row.stem === 'aim')).toBe(true);
+    expect(filledCount(verb)).toBe(0);
+  });
+
+  it('counts a row whose form is just its radical, once the entry has begun', () => {
+    let verb = createVerb({
+      id: 'v1',
+      infinitive: 'vendre',
+      group: 3,
+      now: NOW,
+    });
+    verb = withSharedStem(verb, 'vend', NOW + 1);
+    verb = withRow(verb, 0, { ending: 's' }, NOW + 2);
+    verb = withRow(verb, 1, { ending: 's' }, NOW + 3);
+    verb = withRow(verb, 3, { ending: 'ons' }, NOW + 4);
+    verb = withRow(verb, 4, { ending: 'ez' }, NOW + 5);
+    verb = withRow(verb, 5, { ending: 'ent' }, NOW + 6);
+
+    // "il vend" is the radical itself: a blank ending is the record.
+    expect(verb.rows[2]).toEqual({ stem: 'vend', ending: '' });
+    expect(filledCount(verb)).toBe(6);
+  });
+});
+
+describe('sharedStem', () => {
+  it('reports the radical all six rows agree on', () => {
+    const rows = emptyRows().map(row => ({ ...row, stem: 'aim' }));
+
+    expect(sharedStem(rows)).toBe('aim');
+  });
+
+  it('reads six empty radicals as an agreed empty one', () => {
+    // `aller` is recorded this way: no radical at all, whole words as endings.
+    expect(sharedStem(emptyRows())).toBe('');
+  });
+
+  it('refuses to pick a value when the rows disagree', () => {
+    const rows = emptyRows();
+    rows[0] = { stem: 'v', ending: 'ais' };
+    rows[5] = { stem: 'vont', ending: '' };
+
+    expect(sharedStem(rows)).toBeNull();
+  });
+});
+
+describe('withSharedStem', () => {
+  it('writes one radical into all six rows and leaves the endings alone', () => {
+    const recorded = withRow(
+      createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW }),
+      0,
+      { ending: 'e' },
+      NOW + 1,
+    );
+
+    const next = withSharedStem(recorded, 'aim', NOW + 5);
+
+    expect(next.rows.map(row => row.stem)).toEqual(
+      Array(ROW_COUNT).fill('aim'),
+    );
+    expect(next.rows[0].ending).toBe('e');
+    expect(next.updatedAt).toBe(NOW + 5);
+    // Immutable: the entry it came from keeps its own rows.
+    expect(recorded.rows[0]).toEqual({ stem: '', ending: 'e' });
+  });
+
+  it('overwrites a row that had recorded its own radical', () => {
+    const own = withRow(
+      createVerb({ id: 'v1', infinitive: 'aller', group: 3, now: NOW }),
+      0,
+      { stem: 'v', ending: 'ais' },
+      NOW + 1,
+    );
+
+    const next = withSharedStem(own, '', NOW + 2);
+
+    expect(next.rows[0]).toEqual({ stem: '', ending: 'ais' });
   });
 });
 

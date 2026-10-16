@@ -26,8 +26,49 @@ export function isRowFilled(row: ConjugationRow): boolean {
   return row.stem.trim() !== '' || row.ending.trim() !== '';
 }
 
+/**
+ * How much of the conjugation is on paper.
+ *
+ * The detail screen's `radical` field writes one stem into all six rows at
+ * once, so "anything at all is written" would make an untouched entry look
+ * complete the moment its radical is typed. The entry therefore counts nothing
+ * before its first ending; after that a row whose form is just its radical —
+ * "il vend" — counts like any other.
+ */
 export function filledCount(verb: Verb): number {
-  return verb.rows.filter(isRowFilled).length;
+  const started = verb.rows.some(row => row.ending.trim() !== '');
+  return started ? verb.rows.filter(isRowFilled).length : 0;
+}
+
+/**
+ * The stem the six rows agree on, or `null` when they differ.
+ *
+ * An entry can legitimately have no single radical: `aller` records the whole
+ * word in each row, `venir` changes its radical halfway. `null` is what the
+ * radical field shows as "variable" — the codex never guesses a value from the
+ * forms, it only reports what the user already wrote.
+ */
+export function sharedStem(rows: ConjugationRow[]): string | null {
+  const [first, ...rest] = rows;
+  if (first === undefined) {
+    return '';
+  }
+  return rest.every(row => row.stem === first.stem) ? first.stem : null;
+}
+
+/**
+ * One radical, written once, handed to all six rows.
+ *
+ * This is a bulk edit of the rows' own recorded stems — not a seventh row and
+ * not a new level in the model: every row keeps its own value and stays
+ * editable on its own, and the endings are untouched.
+ */
+export function withSharedStem(verb: Verb, stem: string, now: number): Verb {
+  return {
+    ...verb,
+    rows: verb.rows.map(row => ({ ...row, stem })),
+    updatedAt: now,
+  };
 }
 
 export function withRow(

@@ -79,6 +79,27 @@ npx vite preview    # 预览构建产物
 
 最后一条值得单独记住：`persist()` 不是开关，是**申请**。它挡得住 LRU 与存储压力淘汰，挡不住用户主动清理与 InPrivate，Safari 还会在 7 天无交互后主动清理。所以"未获批准时明说风险"比"静默申请"诚实——而这也正是备份屏那句话的存在理由。
 
+## 第四处平台差异：`<input>` 没有"内容宽度"
+
+编辑态的词干字段曾把词尾推到一行之外——就是那张 `j' aim ····· e` 的空洞，实测 ≈209px。原因不在"一行分两段"的设计，而在平台：
+
+- react-native-web 把 `TextInput` 渲染成裸 `<input>`，它的 `flex-basis: auto` 解析为**浏览器默认字段宽度**：实测 **209px**，与内容无关（内容是 27px 宽的 `aim`）。词尾是 `flexGrow: 1; flexBasis: 0`，只能从这个固定宽度之后开始。
+- Android 上 RN 按文本测量 TextInput，所以词尾紧跟词干：[02-detail.png](../screenshots/02-detail.png) 里词干墨迹止于 x=178、词尾起于 181。
+- `flex: 1` 的输入框（不定式、卡顶 `radical`）不受影响：`flex: 1` 自带 `flex-basis: 0`，宽度来自 flex 行而非固有宽度。
+- 查看 / 自测态本来就没有这个问题：那一态渲染的是 `<Text>`，天然按内容收缩。
+
+修法（`src/components/ConjugationRowView.tsx`，仅 web 分支）：先**以 `<Text>` 把词干排出来**——首帧就是对的，不会先闪一个宽框；`onLayout`（RNW 走 ResizeObserver）量到宽度后换成被钉住宽度的 `TextInput`，那份隐形副本此后继续跟随，字体后到还会再触发一次、宽度自动纠正，不需要写死字号度量。没有采用 `field-sizing: content`：它更省事，但 Chrome 123+/Firefox 152+/Safari 26.2+ 才支持（[caniuse](https://caniuse.com/mdn-css_properties_field-sizing)，全球约 87%），更老的 iOS Safari 会保持原样。
+
+实测（无头 Chromium，1029×695，六个变位行逐一读 DOM）：
+
+| | 词干字段宽 | 词尾文字起点 |
+| --- | --- | --- |
+| 修复后 | **29px**（量度文本 27 + 2px 给光标） | 紧贴词干 |
+| 同一页面去掉 pin | 209px | 距词干首字母 209px |
+| 卡顶 `radical` 行 | 831px（占满该行） | — |
+
+编辑态的数字取自 DOM（`getComputedStyle` / `getBoundingClientRect`）：无头截图对这个状态只合成出 pin 生效前的一帧（与修复前的构建逐字节相同），故不引用；留下的截图是自测态那张 [web-22-selftest-radical-row-and-mask.png](../screenshots/web/web-22-selftest-radical-row-and-mask.png)——`radical` 行仍在，词尾为 `…` 且紧贴词干。同一次采样里，编辑态与自测态的六行 top 逐一相同（183.5 / 225.5 / 267.5 / 309.5 / 351.5 / 393.5），输入框 14 → 0，掩码 0 → 6。
+
 ## 还没做的
 
 - **Netlify 上的真实部署**：`netlify.toml` 已就位（含 `/sw.js` 必须 `must-revalidate` 这条命门——陈旧 worker 会把新版本永远顶在后面），但域名绑定与仓库授权要在 Netlify 里点，而且 **HTTPS 域名下的 `persist()` 结论必须重新实测**：localhost 上的 false 不代表线上也是 false。

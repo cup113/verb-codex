@@ -14,9 +14,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { ConjugationRowView } from '../components/ConjugationRowView';
 import { OutlinedButton } from '../components/OutlinedButton';
+import { RadicalField } from '../components/RadicalField';
 import { confirmDestructive } from '../platform/confirmDestructive';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
+import { sharedStem } from '../domain/verbs';
 import { verbStore, useVerbState } from '../storage/verbStore';
 import type { RootStackParamList } from '../navigation';
 
@@ -154,6 +156,15 @@ export function VerbDetailScreen({ route, navigation }: Props) {
               <Text style={styles.tense}>{copy.tense}</Text>
             </View>
             <View style={styles.grid}>
+              {/* Recording starts with the radical: one stem for the six rows,
+                  each of them still editable on its own below. Self-test keeps
+                  the row in place and only makes it read-only — the card must
+                  not move when the endings are hidden. */}
+              <RadicalField
+                stem={sharedStem(verb.rows)}
+                editing={!testing}
+                onChange={text => verbStore.setSharedStem(verb.id, text)}
+              />
               {verb.rows.map((row, index) => (
                 <ConjugationRowView
                   key={index}

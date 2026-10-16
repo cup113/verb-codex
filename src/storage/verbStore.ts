@@ -9,6 +9,7 @@ import {
   withInfinitive,
   withNote,
   withRow,
+  withSharedStem,
 } from '../domain/verbs';
 import { seedVerbs } from '../data/seed';
 
@@ -34,6 +35,7 @@ export type VerbStore = {
   flush(): Promise<void>;
   addVerb(input: { infinitive: string; group: Group }): Promise<Verb>;
   setRow(verbId: string, index: number, patch: Partial<ConjugationRow>): void;
+  setSharedStem(verbId: string, stem: string): void;
   setInfinitive(verbId: string, infinitive: string): void;
   setNote(verbId: string, note: string): void;
   reorderVerb(verbId: string, toIndex: number): Promise<void>;
@@ -166,6 +168,29 @@ export function createVerbStore(
     schedulePersist();
   }
 
+  /**
+   * The detail screen's `radical`: one stem, written into all six rows in a
+   * single update — six `setRow` calls would publish six times and persist
+   * six times for one keystroke.
+   */
+  function setSharedStem(verbId: string, stem: string): void {
+    const timestamp = now();
+    let found = false;
+    verbs = verbs.map(verb => {
+      if (verb.id !== verbId) {
+        return verb;
+      }
+      found = true;
+      return withSharedStem(verb, stem, timestamp);
+    });
+    if (!found) {
+      return;
+    }
+    revision++;
+    publish();
+    schedulePersist();
+  }
+
   function setInfinitive(verbId: string, infinitive: string): void {
     const timestamp = now();
     let found = false;
@@ -251,6 +276,7 @@ export function createVerbStore(
     flush: writeNow,
     addVerb,
     setRow,
+    setSharedStem,
     setInfinitive,
     setNote,
     reorderVerb,

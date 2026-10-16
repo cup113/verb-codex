@@ -5,7 +5,7 @@ import {
   VerbStorage,
   createVerbStore,
 } from '../../src/storage/verbStore';
-import { Verb } from '../../src/types';
+import { ROW_COUNT, Verb } from '../../src/types';
 
 const NOW = 1_700_000_000_000;
 
@@ -125,6 +125,46 @@ describe('createVerbStore', () => {
 
     expect(writes.length).toBe(writesAfterAdd + 1);
     expect(persisted(entries)[0].rows[0]).toEqual({ stem: 'aim', ending: 'e' });
+  });
+
+  it('writes one radical into all six rows in a single write', async () => {
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    const writesAfterAdd = writes.length;
+
+    store.setSharedStem(verb.id, 'aim');
+
+    // One keystroke is one pending write, not six.
+    expect(writes.length).toBe(writesAfterAdd);
+    expect(store.getSnapshot().verbs[0].rows.map(row => row.stem)).toEqual(
+      Array(ROW_COUNT).fill('aim'),
+    );
+
+    await store.flush();
+
+    expect(writes.length).toBe(writesAfterAdd + 1);
+    expect(persisted(entries)[0].rows.map(row => row.stem)).toEqual(
+      Array(ROW_COUNT).fill('aim'),
+    );
+  });
+
+  it('leaves the codex untouched when the radical names no entry', async () => {
+    const { storage, writes } = memoryStorage({ [SEEDED_KEY]: 'true' });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    const writesAfterAdd = writes.length;
+
+    store.setSharedStem('nope', 'aim');
+    await store.flush();
+
+    expect(writes.length).toBe(writesAfterAdd);
+    expect(store.getSnapshot().verbs[0].id).toBe(verb.id);
+    expect(store.getSnapshot().verbs[0].rows[0].stem).toBe('');
   });
 
   it('keeps typing that happened while a write was already under way', async () => {
