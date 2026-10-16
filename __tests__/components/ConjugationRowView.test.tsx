@@ -89,8 +89,12 @@ describe('ConjugationRowView', () => {
     expect(onReveal).toHaveBeenCalledTimes(1);
   });
 
-  it('elides the first person only when the stem calls for it', () => {
+  it('elides the first person when the row starts with a vowel', () => {
     const elided = render({ rowIndex: 0, row: { stem: 'aim', ending: 'e' } });
+    const bareEnding = render({
+      rowIndex: 0,
+      row: { stem: '', ending: 'ai' },
+    });
     const consonant = render({
       rowIndex: 0,
       row: { stem: 'fin', ending: 'is' },
@@ -101,6 +105,7 @@ describe('ConjugationRowView', () => {
     });
 
     expect(texts(elided.tree)).toContain("j'");
+    expect(texts(bareEnding.tree)).toContain("j'");
     expect(texts(consonant.tree)).toContain('je');
     expect(texts(plural.tree)).toContain('nous');
   });

@@ -366,14 +366,22 @@ describe('nextVerbId', () => {
 
 describe('pronounFor', () => {
   it('elides the first person before a vowel or a mute h', () => {
-    expect(pronounFor(0, 'aim')).toBe("j'");
-    expect(pronounFor(0, 'habite')).toBe("j'");
-    expect(pronounFor(0, '')).toBe('je');
+    expect(pronounFor(0, 'aim', 'e')).toBe("j'");
+    expect(pronounFor(0, 'habite', '')).toBe("j'");
+    expect(pronounFor(0, '', '')).toBe('je');
+  });
+
+  it('reads the ending when the stem is blank', () => {
+    // How the seed records "aller": the whole form sits in the ending, so an
+    // entry like "avoir" (bare "ai") is the letter the pronoun faces.
+    expect(pronounFor(0, '', 'ai')).toBe("j'");
+    expect(pronounFor(0, '  ', 'ai')).toBe("j'");
+    expect(pronounFor(0, '', 'suis')).toBe('je');
   });
 
   it('keeps "je" before a consonant', () => {
-    expect(pronounFor(0, 'fin')).toBe('je');
-    expect(pronounFor(0, '  vais')).toBe('je');
+    expect(pronounFor(0, 'fin', 'is')).toBe('je');
+    expect(pronounFor(0, '  vais', '')).toBe('je');
   });
 
   it('never elides the other five rows', () => {
@@ -381,8 +389,8 @@ describe('pronounFor', () => {
       if (index === 0) {
         return;
       }
-      expect(pronounFor(index, 'aim')).toBe(pronoun);
-      expect(pronounFor(index, 'fin')).toBe(pronoun);
+      expect(pronounFor(index, 'aim', 'e')).toBe(pronoun);
+      expect(pronounFor(index, 'fin', 'is')).toBe(pronoun);
     });
   });
 });

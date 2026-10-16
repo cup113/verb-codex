@@ -45,7 +45,7 @@ export function ConjugationRowView({
   return (
     <View style={styles.row}>
       <Text style={styles.pronoun} numberOfLines={1}>
-        {pronounFor(rowIndex, row.stem)}
+        {pronounFor(rowIndex, row.stem, row.ending)}
       </Text>
       {editing ? (
         <View style={[styles.box, focused && styles.boxFocused]}>
