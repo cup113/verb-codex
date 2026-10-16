@@ -20,6 +20,7 @@ export const copy = {
   deleteTitle: (infinitive: string) => `Supprimer « ${infinitive} » ?`,
   deleteBody: 'Cette entrée et ses six lignes seront effacées.',
   longPressHint: 'Appui long pour réordonner',
+  dragHint: 'Maintenir et glisser pour réordonner',
   radical: 'radical',
   radicalPlaceholder: 'ex. aim',
   radicalMixed: 'variable',

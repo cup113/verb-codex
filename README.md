@@ -18,7 +18,7 @@
 | 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                 |
 | 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义  |
 | 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                       |
-| 长按某行（仅 Android）  | 拿起该行并拖动，在**分组**内重排**次序**；web 上不提供重排（见 [docs/spike-web.md](docs/spike-web.md)）                                  |
+| 长按某行后拖动          | 在**分组**内重排**次序**，松手即落盘。Android：长按拿起（手势本身判定，位移超过 10px 即失败，所以滑动列表不会误拿起）。桌面浏览器：按住 400ms 后拖动；触摸浏览器不提供（HTML5 拖放不响应手指），理由见 [docs/spike-web.md](docs/spike-web.md) |
 | 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                  |
 | 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                                |
 | 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键） |
@@ -33,7 +33,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：60 个用例，覆盖领域逻辑（含备份信封）、存储、行组件、列表页与 App 装配
+npm test               # jest：86 个用例，覆盖领域逻辑（含备份信封与拖放落点换算）、存储、行组件、列表页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -47,7 +47,7 @@ src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读�
 src/domain/backup.ts        备份信封：序列化、文件名、容错解析（纯逻辑，可单测）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
-src/platform/               平台分包：删除确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）
+src/platform/               平台分包：删除确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）、能否用鼠标拖动重排（`reorderByDrag`）
 src/data/seed.ts            首启的三条示例条目
 src/screens/                列表 / 详情（含自测态）/ 新增
 src/components/             Screen、分组标签、变位行、列表行、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
@@ -111,6 +111,8 @@ python tools/make-icons.py     # 需要 Pillow
 - **构建变慢**：reanimated/worklets/gesture-handler 都要为 4 个 ABI 编译原生代码，本地首次 `assembleRelease` 从 1 分半涨到 **11 分半**（增量构建仍快）；CI 上同理。
 - **测试日志有噪音**：`draggable-flatlist` 内部给 reanimated 的 `useDerivedValue` 传了 deps 数组，reanimated 4 会重复警告 "Dependencies should only be used on the web"。这是该库写在 reanimated 4 之前的痕迹，不影响行为。
 
+**"拿起"由手势判定，不由 `Pressable.onLongPress` 判定**（`src/components/VerbList.tsx` 的 `DraggableRow`）。RN 的 `Pressability` 只在**收到 JS 触摸移动事件**时才取消长按计时器，而 draggable list 的 pan 参与手势仲裁时这些事件不保证送达——于是随手一次滑动可能在 400ms 后把行"拿起"、并把 `scrollEnabled` 关掉，列表就再也滚不动。改成 gesture-handler 的 `useLongPressGesture({ minDuration: 400, maxDistance: 10, runOnJS: true })` 后，位移超限是在**原生手势层**失败，与 JS 事件是否送达无关。`Pressable` 的 `onLongPress` 只留一个空函数：RN 在没有长按处理器时，长按后松手也会触发 `onPress`（拿起又原地放下会跳进详情页），空函数用来吞掉那一次。
+
 ### Android 构建要点（Windows）
 
 - Gradle wrapper 走腾讯镜像并带官方 `distributionSha256Sum`，`networkTimeout=120000`（`android/gradle/wrapper/gradle-wrapper.properties`）。
@@ -121,7 +123,9 @@ python tools/make-icons.py     # 需要 Pillow
 
 ## Web / PWA
 
-`npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。除**长按拖动重排**外全部功能可用（列表、分组筛选、详情、附注、新增、自测、删除、持久化、导出/导入），dev 与构建产物渲染逐像素一致。**次序只在 Android 上调整**：web 列表是 `VerbList.web.tsx`，一个不提供重排的普通 `FlatList`。
+`npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。功能齐备（列表、分组筛选、详情、附注、新增、自测、删除、持久化、导出/导入、**次序重排**），dev 与构建产物渲染逐像素一致。**次序**两端都能调，触发方式各随其平台：Android/iOS 长按拿起，桌面浏览器按住 400ms 后拖动（`VerbList.web.tsx`）——触摸浏览器仍不提供，因为 HTML5 拖放不响应手指，而把触摸拖拽做对（不伤滚动）是 RNGH 在原生侧才有的仲裁能力。
+
+web 的重排不走 `draggable-flatlist`：它由 reanimated 驱动，而 reanimated 4 的 worklet 变换进不了 Vite 管线（见 spike 文档）。这里改用浏览器自己的 HTML5 拖放，**不加任何依赖**。有一条实测得出的必要设计：浏览器在指针移动 **2px** 后就判定拖放开始，并**吞掉那一次点击**——所以行不是天生可拖，而是**按住 400ms** 才拿到 `draggable`。否则"点开条目"会被一次手抖抢走（实测：2px 抖动即不再跳转），而 2px 的误拖还可能落进某个缝隙、造成非本意的重排。
 
 它现在是一个**可安装、可离线**的 PWA（`vite-plugin-pwa` + workbox 7，见 `vite.config.mts`）：manifest 由插件生成，service worker 预缓存 22 项 / 约 2 MB（外壳 + 5 个字体 + 图标），**断网冷启动可用**（`screenshots/web/web-21`）。
 
@@ -133,18 +137,19 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 部署（Netlify）用仓库里的 [`netlify.toml`](netlify.toml)：`npm run web:build` → `dist`，Node 22。两条缓存规则是 PWA 的命门——`/sw.js` 与 manifest 必须 `must-revalidate`（否则新版本会被陈旧 worker 顶住，"下次关掉应用才更新"就永远不成立），而 `/assets/*` 是内容哈希的，可以 `immutable` 长缓存。
 
-### 三处平台差异与一个诚实的提示
+### 平台差异与一个诚实的提示
 
-| 位置     | Android                                   | Web                                                    |
-| -------- | ----------------------------------------- | ------------------------------------------------------ |
-| 存储     | AsyncStorage（Room/SQLite，永不被系统清） | localStorage；启动时申请 `navigator.storage.persist()` |
-| 删除确认 | `Alert.alert`                             | `window.confirm`（RNW 的 `Alert.alert` 是空函数）      |
-| 返回键   | `BackHandler` 先退自测                    | 无此键；RNW 的桩只会 `console.error`，故不注册         |
-| 备份落地 | 系统分享面板导出 + 粘贴导入               | 真文件下载 / `<input type="file">`                     |
+| 位置       | Android                                   | Web                                                                                    |
+| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| 存储       | AsyncStorage（Room/SQLite，永不被系统清） | localStorage；启动时申请 `navigator.storage.persist()`                                  |
+| 删除确认   | `Alert.alert`                             | `window.confirm`（RNW 的 `Alert.alert` 是空函数）                                       |
+| 返回键     | `BackHandler` 先退自测                    | 无此键；RNW 的桩只会 `console.error`，故不注册                                          |
+| 备份落地   | 系统分享面板导出 + 粘贴导入               | 真文件下载 / `<input type="file">`                                                      |
+| **次序**重排 | 长按拿起后拖动（gesture-handler 判定）  | 按住 400ms 后鼠标拖动（HTML5 拖放）；触摸浏览器不提这件事，提示词也不出现（`src/platform/reorderByDrag{,.web}.ts`） |
 
 **关于持久化**：`persist()` 不是万能的。实测 Chromium 在 localhost 上直接返回 `false`（它按"安装状态 / 站点参与度"自行决定、不弹窗；Firefox 才会询问），**用户主动清理与 InPrivate 也从来挡不住**。所以当它返回 false 时，备份屏会明说一句"这个浏览器可能不留情面地清掉数据"——[screenshots/web/web-20](screenshots/web/web-20-backup-evictable-warning.png) 就是它出现的样子。这是提示，不是装饰。
 
-完整结论、证据截图与"拖动为何在 web 上不成立"见 **[docs/spike-web.md](docs/spike-web.md)**。
+完整结论、证据截图与"拖动在 web 上为何只能另起一套"见 **[docs/spike-web.md](docs/spike-web.md)**。
 
 ## CI（GitHub Actions）
 
@@ -152,7 +157,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（60 个用例）                                                                                                                                   |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（86 个用例）                                                                                                                                   |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、5 个字体都在），并上传 `dist/` 作为构件                                                                                      |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |

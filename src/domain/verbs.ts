@@ -128,6 +128,19 @@ export function reorderWithinGroup(
   );
 }
 
+/**
+ * Where a dragged entry lands, given the slot it was dropped into.
+ *
+ * A drop between two rows is described by the slot it went into — `0` above
+ * the first row, `n` below the last — but lifting the dragged entry out first
+ * shifts every slot after it down by one. This is the arithmetic the draggable
+ * list does internally before it calls `onDragEnd` with a `to` index; the web
+ * twin owns its own drop target, so it has to do it itself.
+ */
+export function insertionIndex(from: number, slot: number): number {
+  return slot > from ? slot - 1 : slot;
+}
+
 /** Local-only identifier: collisions need uniqueness, not cryptography. */
 export function nextVerbId(now: number, salt: number = Math.random()): string {
   return `v${now.toString(36)}${Math.floor(salt * 1e6).toString(36)}`;

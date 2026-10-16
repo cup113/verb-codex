@@ -8,6 +8,7 @@ import { OutlinedButton } from '../components/OutlinedButton';
 import { copy } from '../copy';
 import { colors, fonts, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
+import { reorderByDrag } from '../platform/reorderByDrag';
 import { Group } from '../types';
 import type { RootStackParamList } from '../navigation';
 
@@ -17,6 +18,19 @@ export function VerbListScreen({ navigation }: Props) {
   const { verbs, ready } = useVerbState();
   const [group, setGroup] = useState<Group>(1);
   const shown = verbs.filter(verb => verb.group === group);
+
+  /*
+   * Ordering exists on both platforms, each with its own idiom: a long press
+   * on a phone, a mouse drag in a browser. A touch browser can do neither, so
+   * it is told nothing — the hint is a promise, and there would be nothing
+   * behind it.
+   */
+  const reorderHint =
+    Platform.OS !== 'web'
+      ? copy.longPressHint
+      : reorderByDrag
+        ? copy.dragHint
+        : null;
 
   if (!ready) {
     return <Screen />;
@@ -28,14 +42,13 @@ export function VerbListScreen({ navigation }: Props) {
         <View
           style={[
             styles.actions,
-            // With the hint gone the button is the only child, and
-            // `space-between` would strand it on the left.
-            Platform.OS === 'web' && styles.actionsWeb,
+            // With no hint the button is the only child, and `space-between`
+            // would strand it on the left.
+            reorderHint === null && styles.actionsNoHint,
           ]}
         >
-          {/* The web list is not reorderable, so it claims nothing. */}
-          {Platform.OS === 'web' ? null : (
-            <Text style={styles.tip}>{copy.longPressHint}</Text>
+          {reorderHint === null ? null : (
+            <Text style={styles.tip}>{reorderHint}</Text>
           )}
           <OutlinedButton
             label={copy.newVerb}
@@ -96,7 +109,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  actionsWeb: {
+  actionsNoHint: {
     justifyContent: 'flex-end',
   },
   tip: {

@@ -6,9 +6,16 @@ import { cardSurface, colors, mono, serif } from '../theme';
 type Props = {
   verb: Verb;
   onPress: () => void;
-  /** Absent on the web, where the list cannot be reordered. */
+  /**
+   * A long press on this row. The native list passes an empty function on
+   * purpose: picking the row up is the gesture-handler long press the list
+   * wraps around it (`DraggableRow` in VerbList.tsx), and setting a long-press
+   * handler is the only way to stop React Native from also firing `onPress` on
+   * release — which would open the entry after a row was picked up and put
+   * back. Absent on the web, where a mouse drag does the reordering.
+   */
   onLongPress?: () => void;
-  /** True while this row is the one being dragged. */
+  /** True while this row is lifted, on either platform's terms. */
   dragging?: boolean;
 };
 

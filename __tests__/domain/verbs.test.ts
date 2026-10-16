@@ -2,6 +2,7 @@ import {
   createVerb,
   emptyRows,
   filledCount,
+  insertionIndex,
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
@@ -76,6 +77,59 @@ describe('reorderWithinGroup', () => {
     expect(moved[0]).toBe(parler);
     expect(moved[1]).toBe(aimer);
     expect(moved[1].updatedAt).toBe(aimer.updatedAt);
+  });
+});
+
+/**
+ * The web list drags rows itself, so it computes its own `toIndex` from the gap
+ * the pointer was over. These cases pin that arithmetic to the store's move:
+ * a drop is a gap, but the dragged entry is lifted out of the list first, so
+ * every gap below it is one slot further up by the time it lands.
+ */
+describe('insertionIndex', () => {
+  const entries = ['a', 'b', 'c'].map(id =>
+    createVerb({ id, infinitive: id, group: 1, now: NOW }),
+  );
+  const ids = (verbs: ReturnType<typeof reorderWithinGroup>) =>
+    verbs.map(verb => verb.id);
+
+  it('reads a slot as a gap, not as a destination', () => {
+    // The gap below `c` (slot 3, above no row): `a` lands last, not past it.
+    expect(insertionIndex(0, 3)).toBe(2);
+    // Both faces of `b`'s own gap leave `b` where it is.
+    expect(insertionIndex(1, 1)).toBe(1);
+    expect(insertionIndex(1, 2)).toBe(1);
+    // The ends of the list.
+    expect(insertionIndex(2, 0)).toBe(0);
+    expect(insertionIndex(0, 0)).toBe(0);
+  });
+
+  it('lands the entry in the gap it was dropped into, from every row', () => {
+    // slot 0 is above `a`, 1 between `a` and `b`, 2 between `b` and `c`, 3 below `c`.
+    const expected: Record<string, string[]> = {
+      '0,0': ['a', 'b', 'c'],
+      '0,1': ['a', 'b', 'c'],
+      '0,2': ['b', 'a', 'c'],
+      '0,3': ['b', 'c', 'a'],
+      '1,0': ['b', 'a', 'c'],
+      '1,1': ['a', 'b', 'c'],
+      '1,2': ['a', 'b', 'c'],
+      '1,3': ['a', 'c', 'b'],
+      '2,0': ['c', 'a', 'b'],
+      '2,1': ['a', 'c', 'b'],
+      '2,2': ['a', 'b', 'c'],
+      '2,3': ['a', 'b', 'c'],
+    };
+
+    Object.entries(expected).forEach(([dropped, order]) => {
+      const [from, slot] = dropped.split(',').map(Number);
+      const moved = reorderWithinGroup(
+        entries,
+        entries[from].id,
+        insertionIndex(from, slot),
+      );
+      expect(ids(moved)).toEqual(order);
+    });
   });
 });
 

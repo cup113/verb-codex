@@ -1,19 +1,182 @@
+import { useEffect, useRef, useState } from 'react';
+import type {
+  CSSProperties,
+  DragEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { VerbRow } from './VerbRow';
+import { insertionIndex } from '../domain/verbs';
+import { colors } from '../theme';
 import type { VerbListProps } from './VerbList';
 
 /**
- * Web: a plain list, with no way to reorder.
+ * How long a row must be held before it can be dragged.
  *
- * Ordering runs on reanimated, whose worklet transform has no place in the
- * Vite pipeline (see docs/spike-web.md), so offering the long-press drag here
- * would be offering something inert — the exact failure this twin removes.
- * The codex keeps working; ordering stays a native-only affordance.
- *
- * `onReorder` is not destructured on purpose: it exists so both platforms
- * share one props type at the call site, and the web never calls it.
+ * The native list reorders on a long press, and the browser needs the same gate
+ * for the same reason: a tap and a drag begin with the same gesture on the same
+ * target, and a browser starts an HTML5 drag after a couple of pixels of
+ * movement. A row that was draggable from the start therefore swallows the tap
+ * that opens an entry (measured: 2px of wobble, no navigation). Arming the drag
+ * only after a deliberate hold keeps tap-to-open intact and makes an accidental
+ * reorder — a 2px nudge that lands between two rows — impossible.
  */
-export function VerbList({ verbs, empty, onPressVerb }: VerbListProps) {
+const HOLD_MS = 400;
+
+/** Movement that cancels a pending hold: this was a tap, or a wobble. */
+const HOLD_SLOP = 10;
+
+/** Where the row would land: a hairline inside the row it sits against. */
+const dropLine = (edge: 'top' | 'bottom') =>
+  `inset 0 ${edge === 'top' ? '2px' : '-2px'} 0 0 ${colors.terracotta}`;
+
+const DRAG_SOURCE: CSSProperties = {
+  cursor: 'grab',
+  // A row is a press target and a drag source; selecting its text helps with
+  // neither, and a half-selected label fights the drag.
+  userSelect: 'none',
+};
+
+/**
+ * Web: the same list, reordered by holding a row and dragging it with the
+ * mouse.
+ *
+ * The native twin gets its ordering from reanimated, whose worklet transform
+ * has no place in the Vite pipeline (see docs/spike-web.md) — that is why the
+ * long-press chain cannot be shared. This twin therefore reorders with the
+ * browser's own drag and drop: no animation library, and no interference with
+ * scrolling (the browser owns the gesture, including its edge auto-scroll).
+ * The store call is the same `onReorder(verbId, toIndex)` the native list makes.
+ *
+ * A finger cannot do this — HTML5 drag and drop fires nothing for touch — so a
+ * touch browser gets no hint and no reorder; ordering there stays the native
+ * app's job, exactly as it was before.
+ *
+ * One difference from the native twin: holding a row and releasing it without
+ * moving starts no drag (the browser is the one that lifts it, and it has not),
+ * so that still opens the entry. Nothing was picked up, so nothing is put back.
+ */
+export function VerbList({
+  verbs,
+  empty,
+  onPressVerb,
+  onReorder,
+}: VerbListProps) {
+  // The row whose hold has matured: only it is draggable, and only until the
+  // press ends.
+  const [armedId, setArmedId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  // The gap the row would drop into: 0 above the first row, `verbs.length`
+  // below the last. Only the marker needs it — the drop itself recomputes.
+  const [dropSlot, setDropSlot] = useState<number | null>(null);
+
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+
+  /*
+   * An armed row has to be disarmed by a release *anywhere*: the press can end
+   * outside the row it started on, and React only delivers `pointerup` to the
+   * element under the pointer. Leaving the row is not a release, though — it is
+   * how a drag begins — so nothing here listens for `pointerleave`.
+   *
+   * Once the drag session starts the browser stops delivering pointer events,
+   * so this listener is dropped while dragging and `dragend` ends it instead.
+   */
+  useEffect(() => {
+    if (armedId === null || draggingId !== null) {
+      return;
+    }
+    const release = () => setArmedId(null);
+    document.addEventListener('pointerup', release);
+    return () => document.removeEventListener('pointerup', release);
+  }, [armedId, draggingId]);
+
+  const cancelHold = () => {
+    if (holdTimer.current !== null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  };
+
+  const clearDrag = () => {
+    cancelHold();
+    pressOrigin.current = null;
+    setArmedId(null);
+    setDraggingId(null);
+    setDropSlot(null);
+  };
+
+  const handlePointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
+    verbId: string,
+  ) => {
+    // Only a mouse or trackpad arms a drag; a finger gets the list's scrolling
+    // and nothing else.
+    if (event.pointerType !== 'mouse' || event.button !== 0) {
+      return;
+    }
+    pressOrigin.current = { x: event.clientX, y: event.clientY };
+    cancelHold();
+    holdTimer.current = setTimeout(() => {
+      holdTimer.current = null;
+      setArmedId(verbId);
+    }, HOLD_MS);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (holdTimer.current === null || pressOrigin.current === null) {
+      return;
+    }
+    const travelled = Math.hypot(
+      event.clientX - pressOrigin.current.x,
+      event.clientY - pressOrigin.current.y,
+    );
+    if (travelled > HOLD_SLOP) {
+      cancelHold();
+    }
+  };
+
+  /** Which slot the pointer is over, from where it sits inside the row. */
+  const slotAt = (event: DragEvent<HTMLDivElement>, index: number) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLDivElement>, verbId: string) => {
+    // Firefox refuses to start a drag unless some data is set on it.
+    event.dataTransfer.setData('text/plain', verbId);
+    event.dataTransfer.effectAllowed = 'move';
+    setDraggingId(verbId);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>, index: number) => {
+    if (draggingId === null) {
+      return;
+    }
+    // Without this the browser treats the row as a non-drop-target. Nothing is
+    // dropped by accident: the only rows that accept a drop are rows of this
+    // list, and only while one of its own rows is in flight.
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const slot = slotAt(event, index);
+    // `dragover` fires continuously; the same slot must not re-render the list.
+    setDropSlot(previous => (previous === slot ? previous : slot));
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+    const verbId = event.dataTransfer.getData('text/plain');
+    // Read the slot off the same event rather than the state the marker used:
+    // the two cannot disagree then, whatever order they were flushed in.
+    const slot = slotAt(event, index);
+    clearDrag();
+    const from = verbs.findIndex(verb => verb.id === verbId);
+    if (from === -1) {
+      return;
+    }
+    onReorder(verbId, insertionIndex(from, slot));
+  };
+
   return (
     <FlatList
       data={verbs}
@@ -22,9 +185,51 @@ export function VerbList({ verbs, empty, onPressVerb }: VerbListProps) {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={verbs.length === 0 ? styles.emptyWrap : undefined}
       ListEmptyComponent={empty}
-      renderItem={({ item }) => (
-        <VerbRow verb={item} onPress={() => onPressVerb(item)} />
-      )}
+      renderItem={({ item, index }) => {
+        const isArmed = item.id === armedId;
+        const isDragging = item.id === draggingId;
+        // `top of row i` and `bottom of row i-1` are the same slot, so the gap
+        // is painted once: above its row, except below the last one.
+        const markAbove = dropSlot === index;
+        const markBelow = dropSlot === verbs.length && index === verbs.length - 1;
+        const wrapper: CSSProperties = {
+          ...DRAG_SOURCE,
+          opacity: isDragging ? 0.35 : 1,
+          // Drawn inside the row, so the marker never moves the rows it sits
+          // between.
+          boxShadow: markAbove
+            ? dropLine('top')
+            : markBelow
+              ? dropLine('bottom')
+              : undefined,
+        };
+        return (
+          <div
+            // Armed by the hold, not by the row being a row: see HOLD_MS.
+            draggable={isArmed}
+            onPointerDown={event => handlePointerDown(event, item.id)}
+            onPointerMove={handlePointerMove}
+            // A release over the row itself; a release anywhere else is caught
+            // by the document listener above.
+            onPointerUp={clearDrag}
+            onDragStart={event => handleDragStart(event, item.id)}
+            onDragOver={event => handleDragOver(event, index)}
+            onDrop={event => handleDrop(event, index)}
+            // Fires on a cancelled drag too (Escape, or a drop outside the
+            // list), which is the only cleanup those paths get.
+            onDragEnd={clearDrag}
+            style={wrapper}
+          >
+            <VerbRow
+              verb={item}
+              // The hold that arms the drag is worth showing: this is the same
+              // lifted edge the native row gets when it is picked up.
+              dragging={isArmed || isDragging}
+              onPress={() => onPressVerb(item)}
+            />
+          </div>
+        );
+      }}
     />
   );
 }
