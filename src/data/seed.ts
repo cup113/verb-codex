@@ -1,10 +1,10 @@
 import { ConjugationRow, Verb } from '../types';
 import { emptyRows } from '../domain/verbs';
 
-function rows(stem: string, endings: readonly string[]): ConjugationRow[] {
+function rows(forms: readonly string[]): ConjugationRow[] {
   const filled = emptyRows();
-  endings.forEach((ending, index) => {
-    filled[index] = { stem, ending };
+  forms.forEach((form, index) => {
+    filled[index] = { form };
   });
   return filled;
 }
@@ -20,7 +20,7 @@ const SEED: readonly Verb[] = [
     infinitive: 'aimer',
     group: 1,
     tense: 'present',
-    rows: rows('aim', ['e', 'es', 'e', 'ons', 'ez', 'ent']),
+    rows: rows(['aime', 'aimes', 'aime', 'aimons', 'aimez', 'aiment']),
     note: '',
     createdAt: 0,
     updatedAt: 0,
@@ -30,7 +30,14 @@ const SEED: readonly Verb[] = [
     infinitive: 'finir',
     group: 2,
     tense: 'present',
-    rows: rows('fin', ['is', 'is', 'it', 'issons', 'issez', 'issent']),
+    rows: rows([
+      'finis',
+      'finis',
+      'finit',
+      'finissons',
+      'finissez',
+      'finissent',
+    ]),
     note: '',
     createdAt: 0,
     updatedAt: 0,
@@ -40,7 +47,7 @@ const SEED: readonly Verb[] = [
     infinitive: 'aller',
     group: 3,
     tense: 'present',
-    rows: rows('', ['vais', 'vas', 'va', 'allons', 'allez', 'vont']),
+    rows: rows(['vais', 'vas', 'va', 'allons', 'allez', 'vont']),
     note: '',
     createdAt: 0,
     updatedAt: 0,

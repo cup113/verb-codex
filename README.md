@@ -2,30 +2,30 @@
 
 个人法语变位备忘录（Android / React Native，另有一个可安装的 Web/PWA 目标）。你亲手把学到的动词和它的六行现在时变位写进法典，之后随时翻看、遮盖自测。
 
-原型参照 [demo](demo)（法式纸质笔记风的单页 HTML），本 App 是它的 React Native 重写：同样的纸色、赤陶色词尾、衬线 + 等宽排版，但把"一张卡片"拆成了"一本可以记录、可以翻阅的法典"。
+原型参照 [demo](demo)（法式纸质笔记风的单页 HTML），本 App 是它的 React Native 重写：同样的纸色、衬线 + 等宽排版，但把"一张卡片"拆成了"一本可以记录、可以翻阅的法典"。
 
 ## 它是什么，不是什么
 
-- **是**一本记录本：收录动词、逐格手填**词干**与**词尾**、另写一段自由**附注**，查看为主、自测为辅。
+- **是**一本记录本：收录动词、逐行写下那个**整词**、另写一段自由**附注**，查看为主、自测为辅。
 - **不是**词典或判分器：法典不懂法语，不生成变位、不校验对错、不评分。自测只能"遮盖 + 点击揭晓"，比对对象是你自己写下的记录（见 [ADR 0001](docs/adr/0001-manual-memo-no-engine.md)）。
-- 完整术语（动词条目 / 词干 / 词尾 / 分组 / 自测 / 记录值）见 [CONTEXT.md](CONTEXT.md)。
+- 完整术语（动词条目 / 整词 / 分组 / 自测 / 记录值）见 [CONTEXT.md](CONTEXT.md)。
 
 ## 交互
 
-| 动作                    | 结果                                                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位    |
-| 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                 |
-| 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义  |
-| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                       |
-| 长按某行后拖动          | 在**分组**内重排**次序**，松手即落盘。Android：长按拿起（手势本身判定，位移超过 10px 即失败，所以滑动列表不会误拿起）。桌面浏览器：按住 400ms 后拖动；触摸浏览器不提供（HTML5 拖放不响应手指），理由见 [docs/spike-web.md](docs/spike-web.md) |
-| 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                  |
-| 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，词尾位显示 `…`）                                                                |
-| 「S'entraîner」         | 进入自测：词尾全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键） |
+| 动作                    | 结果                                                                                                                                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位                                                                                                                                          |
+| 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                                                                                                                                                       |
+| 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义                                                                                                                                        |
+| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                                                                                                                                                             |
+| 长按某行后拖动          | 在**分组**内重排**次序**，松手即落盘。Android：按住 400ms 拿起（**同一个手势**负责拿起与跟手；按住期间手指走过系统触摸阈值（touch slop，约 8dp）即失败，所以滑动列表不会误拿起）。桌面浏览器：按住 400ms 后拖动；触摸浏览器不提供（HTML5 拖放不响应手指），理由见 [docs/spike-web.md](docs/spike-web.md) |
+| 标题行「Sauvegarde」    | 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                                                                                                                                                        |
+| 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，每行显示 `…`）                                                                                                                                                                                                        |
+| 「S'entraîner」         | 进入自测：**整词**全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键）                                                                                                                                   |
 
 首次启动会写入三条示例条目（aimer / finir / aller，即 demo 卡片上的那三个），可随意修改或删除（删除在详情页顶部）；删空之后不会再次写入。
 
-代词第一行按该行记下的文字的首字母显示 `j'` 或 `je`（元音及 h 前省音；词干为空时看词尾首字母，如空词干 + `ai` → `j'`）——这是排版便利，不是语法判断。
+代词第一行按该行记下的**整词**首字母显示 `j'` 或 `je`（元音及 h 前省音，`ai` 这种两个字母的整词同样算）——这是排版便利，不是语法判断。
 
 ## 开发
 
@@ -33,7 +33,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：87 个用例，覆盖领域逻辑（含备份信封与拖放落点换算）、存储、行组件、列表页与 App 装配
+npm test               # jest：75 个用例，覆盖领域逻辑（含备份信封、旧数据迁移与拖动自动滚动的算式）、存储、行组件、列表页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -62,11 +62,11 @@ assets/fonts/               字体源文件（构建时同步进 android/app/src
 列表页标题行右侧的 `Sauvegarde` 进入导出 / 导入。导出文件是一个带格式版本的信封，缩进过、可读也可 diff：
 
 ```json
-{ "app": "verbcodex", "format": 1, "exportedAt": "2026-10-15T12:34:56.789Z", "verbs": [ … ] }
+{ "app": "verbcodex", "format": 2, "exportedAt": "2026-10-15T12:34:56.789Z", "verbs": [ … ] }
 ```
 
 - **导入是替换，不是合并**：确认对话框会写明"当前 N 条会被替换"。合并看起来更友好，但它必须先回答"同一条各改了一半听谁的"，而法典的立场是记录由你负责；不可预测的自动合并比明确的替换更糟。
-- **读盘一律容错**：坏条目被丢弃、缺字段补默认值（复用存储层同一套 coercion）；但**格式版本比你新时明确拒绝**，而不是静默导入成空法典——那会让你以为数据还在。
+- **读盘一律容错**：坏条目被丢弃、缺字段补默认值（复用存储层同一套 coercion）；格式 1 的旧备份（一行分**词干**与**词尾**两段）照样导入，两段在读取时拼回**整词**；但**格式版本比你新时明确拒绝**，而不是静默导入成空法典——那会让你以为数据还在。
 - **平台差异**：Web 是真文件（下载 / `<input type="file">`）；Android 是分享面板 + 粘贴，因为文件选择器要再加一个原生依赖、再一次四 ABI 编译，这个功能不值当。这条缝在 `src/platform/backupFile{,.web}.ts`。
 - 导出**不会**上传任何东西：这个应用没有后端。
 
@@ -95,9 +95,9 @@ python tools/make-icons.py     # 需要 Pillow
 - **传统方形/圆形**（minSdk 24，API 24/25 仍需要）：全出血，形状直接烘焙进 PNG。
 - 抠背景用"从边框 flood fill"而不是全局色阈：插画领口那道绿边与底色接近但**不连通**，全局阈值会把它一起抹掉。
 
-### 拖动与手势（3 个新增原生依赖）
+### 拖动与手势（3 个原生依赖）
 
-长按拖动重排由 `react-native-draggable-flatlist` 完成，它依赖 `react-native-gesture-handler` 与 `react-native-reanimated`（后者在 4.x 又把 worklet 变换拆到了 `react-native-worklets`）。四处接线，缺一处就报错：
+长按拖动重排由 `src/components/VerbList.tsx` 自己实现，手动接上 `react-native-gesture-handler` 与 `react-native-reanimated`（后者在 4.x 又把 worklet 变换拆到了 `react-native-worklets`）。四处接线，缺一处就报错：
 
 | 位置              | 内容                                                                                                       | 为什么                                                                                                                                 |
 | ----------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -106,12 +106,17 @@ python tools/make-icons.py     # 需要 Pillow
 | `App.tsx`         | `GestureHandlerRootView` 包住全树                                                                          | gesture-handler 的检测器必须挂在这个根视图之下                                                                                         |
 | `jest.setup.js`   | `react-native-gesture-handler/jestSetup` + 给 worklets 的 `getUIRuntimeHolder`/`getUISchedulerHolder` 打桩 | jest 下 worklets 会解析到 **web 变体**，那两个函数在 web 变体里**故意抛错**，而报错发生在 microtask 里、会以"测试失败"的形式出现在别处 |
 
+**拿起与跟手是同一个手势**：`Gesture.Pan().activateAfterLongPress(400)`。它同时解决两件事，而这两件事曾经互为代价：
+
+- **滑动不误拿起**：按住期间手指走过系统的触摸阈值（`scaledTouchSlop`，约 8dp）即失败，这个判定在**原生手势层**（`PanGestureHandler.shouldFail()`），与 JS 事件是否送达无关。RN 的 `Pressability` 做不到——它只在**收到 JS 触摸移动事件**时才取消长按计时器，而列表滚动时这些事件不保证送达，于是随手一次滑动可能在 400ms 后把行"拿起"、并关掉 `scrollEnabled`，列表就再也滚不动。
+- **拿起后真的跟手**：跟踪手指、松手落位、`scrollEnabled` 的开关全在这一支手势手里。曾经的写法是"库内部的 pan + 行上再挂一个长按手势"：长按一激活就按默认仲裁**取消了那个尚未激活的 pan**（库不暴露内部手势引用，无法声明 simultaneous），于是手指不再被跟踪、`onTouchesUp` 也不再送达，`activeKey` 与 `scrollEnabled` 一起卡住——列表滚不动、拿起即跳、松手才交换、交换完再跳一下。单手势没有这个仲裁可输。
+
+`Pressable` 的 `onLongPress` 仍留一个空函数：RN 在没有长按处理器时，长按后松手也会触发 `onPress`（拿起又原地放下会跳进详情页），空函数用来吞掉那一次。`onFinalize` 在手势结束时**必然**触发，所以没有任何路径能把 `scrollEnabled` 留在关闭状态。
+
 两个代价，写在这里免得下次惊讶：
 
 - **构建变慢**：reanimated/worklets/gesture-handler 都要为 4 个 ABI 编译原生代码，本地首次 `assembleRelease` 从 1 分半涨到 **11 分半**（增量构建仍快）；CI 上同理。
-- **测试日志有噪音**：`draggable-flatlist` 内部给 reanimated 的 `useDerivedValue` 传了 deps 数组，reanimated 4 会重复警告 "Dependencies should only be used on the web"。这是该库写在 reanimated 4 之前的痕迹，不影响行为。
-
-**"拿起"由手势判定，不由 `Pressable.onLongPress` 判定**（`src/components/VerbList.tsx` 的 `DraggableRow`）。RN 的 `Pressability` 只在**收到 JS 触摸移动事件**时才取消长按计时器，而 draggable list 的 pan 参与手势仲裁时这些事件不保证送达——于是随手一次滑动可能在 400ms 后把行"拿起"、并把 `scrollEnabled` 关掉，列表就再也滚不动。改成 gesture-handler 的 `useLongPressGesture({ minDuration: 400, maxDistance: 10, runOnJS: true })` 后，位移超限是在**原生手势层**失败，与 JS 事件是否送达无关。`Pressable` 的 `onLongPress` 只留一个空函数：RN 在没有长按处理器时，长按后松手也会触发 `onPress`（拿起又原地放下会跳进详情页），空函数用来吞掉那一次。
+- **列表自己做，就得自己扛细节**：落点间距取**实测**的一行高度（法典六行卡片同高，行高即间距），字体缩放跟着变；行不再被裁剪（`removeClippedSubviews={false}`），换来的是行高可测、下方行能及时让位；拖到屏幕边缘时的自动滚动由 JS 定时器每 16ms 推一次，那份"离边缘多远推多快"的算式是纯函数（`src/components/verbListAutoScroll.ts`，有单测）。
 
 ### Android 构建要点（Windows）
 
@@ -125,7 +130,7 @@ python tools/make-icons.py     # 需要 Pillow
 
 `npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。功能齐备（列表、分组筛选、详情、附注、新增、自测、删除、持久化、导出/导入、**次序重排**），dev 与构建产物渲染逐像素一致。**次序**两端都能调，触发方式各随其平台：Android/iOS 长按拿起，桌面浏览器按住 400ms 后拖动（`VerbList.web.tsx`）——触摸浏览器仍不提供，因为 HTML5 拖放不响应手指，而把触摸拖拽做对（不伤滚动）是 RNGH 在原生侧才有的仲裁能力。
 
-web 的重排不走 `draggable-flatlist`：它由 reanimated 驱动，而 reanimated 4 的 worklet 变换进不了 Vite 管线（见 spike 文档）。这里改用浏览器自己的 HTML5 拖放，**不加任何依赖**。有一条实测得出的必要设计：浏览器在指针移动 **2px** 后就判定拖放开始，并**吞掉那一次点击**——所以行不是天生可拖，而是**按住 400ms** 才拿到 `draggable`。否则"点开条目"会被一次手抖抢走（实测：2px 抖动即不再跳转），而 2px 的误拖还可能落进某个缝隙、造成非本意的重排。
+web 的重排不走原生那套：原生列表由 reanimated 驱动，而 reanimated 4 的 worklet 变换进不了 Vite 管线（见 spike 文档）。这里改用浏览器自己的 HTML5 拖放，**不加任何依赖**。有一条实测得出的必要设计：浏览器在指针移动 **2px** 后就判定拖放开始，并**吞掉那一次点击**——所以行不是天生可拖，而是**按住 400ms** 才拿到 `draggable`。否则"点开条目"会被一次手抖抢走（实测：2px 抖动即不再跳转），而 2px 的误拖还可能落进某个缝隙、造成非本意的重排。
 
 它现在是一个**可安装、可离线**的 PWA（`vite-plugin-pwa` + workbox 7，见 `vite.config.mts`）：manifest 由插件生成，service worker 预缓存 22 项 / 约 2 MB（外壳 + 5 个字体 + 图标），**断网冷启动可用**（`screenshots/web/web-21`）。
 
@@ -139,13 +144,13 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 ### 平台差异与一个诚实的提示
 
-| 位置       | Android                                   | Web                                                                                    |
-| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------- |
-| 存储       | AsyncStorage（Room/SQLite，永不被系统清） | localStorage；启动时申请 `navigator.storage.persist()`                                  |
-| 删除确认   | `Alert.alert`                             | `window.confirm`（RNW 的 `Alert.alert` 是空函数）                                       |
-| 返回键     | `BackHandler` 先退自测                    | 无此键；RNW 的桩只会 `console.error`，故不注册                                          |
-| 备份落地   | 系统分享面板导出 + 粘贴导入               | 真文件下载 / `<input type="file">`                                                      |
-| **次序**重排 | 长按拿起后拖动（gesture-handler 判定）  | 按住 400ms 后鼠标拖动（HTML5 拖放）；触摸浏览器不提这件事，提示词也不出现（`src/platform/reorderByDrag{,.web}.ts`） |
+| 位置         | Android                                       | Web                                                                                                                 |
+| ------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 存储         | AsyncStorage（Room/SQLite，永不被系统清）     | localStorage；启动时申请 `navigator.storage.persist()`                                                              |
+| 删除确认     | `Alert.alert`                                 | `window.confirm`（RNW 的 `Alert.alert` 是空函数）                                                                   |
+| 返回键       | `BackHandler` 先退自测                        | 无此键；RNW 的桩只会 `console.error`，故不注册                                                                      |
+| 备份落地     | 系统分享面板导出 + 粘贴导入                   | 真文件下载 / `<input type="file">`                                                                                  |
+| **次序**重排 | 按住 400ms 拿起后拖动（同一个手势判定与跟手） | 按住 400ms 后鼠标拖动（HTML5 拖放）；触摸浏览器不提这件事，提示词也不出现（`src/platform/reorderByDrag{,.web}.ts`） |
 
 **关于持久化**：`persist()` 不是万能的。实测 Chromium 在 localhost 上直接返回 `false`（它按"安装状态 / 站点参与度"自行决定、不弹窗；Firefox 才会询问），**用户主动清理与 InPrivate 也从来挡不住**。所以当它返回 false 时，备份屏会明说一句"这个浏览器可能不留情面地清掉数据"——[screenshots/web/web-20](screenshots/web/web-20-backup-evictable-warning.png) 就是它出现的样子。这是提示，不是装饰。
 
@@ -157,7 +162,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（86 个用例）                                                                                                                                   |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（75 个用例）                                                                                                                                   |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、5 个字体都在），并上传 `dist/` 作为构件                                                                                      |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |

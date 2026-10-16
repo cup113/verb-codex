@@ -8,6 +8,6 @@ module.exports = {
   // Replaces the preset's pattern, so the preset's entries are repeated here
   // alongside every ESM-only package this app pulls in.
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-screens|react-native-safe-area-context|@react-native-async-storage|react-native-reanimated|react-native-worklets|react-native-gesture-handler|react-native-draggable-flatlist)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-screens|react-native-safe-area-context|@react-native-async-storage|react-native-reanimated|react-native-worklets|react-native-gesture-handler)/)',
   ],
 };

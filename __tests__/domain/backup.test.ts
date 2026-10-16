@@ -15,7 +15,7 @@ function verb(overrides: Partial<Verb> = {}): Verb {
     group: 1,
     tense: 'present',
     rows: emptyRows().map((row, index) =>
-      index === 0 ? { stem: 'aim', ending: 'e' } : row,
+      index === 0 ? { form: 'aime' } : row,
     ),
     note: 'aimer + infinitif',
     createdAt: 1,
@@ -39,6 +39,13 @@ describe('serializeBackup', () => {
     expect(serializeBackup([verb()], EXPORTED_AT)).toContain(
       '\n  "app": "verbcodex"',
     );
+  });
+
+  it('stamps the whole-word format, which a format-1 build refuses', () => {
+    // Pinned as a literal on purpose: this is the number an older install
+    // reads before it decides to refuse the file outright rather than import
+    // six blank rows.
+    expect(serializeBackup([verb()], EXPORTED_AT)).toContain('"format": 2');
   });
 });
 
@@ -70,6 +77,32 @@ describe('parseBackup', () => {
       createdAt: 0,
       updatedAt: 0,
     });
+  });
+
+  it('joins the stem and ending of a format-1 backup', () => {
+    // A file exported by v0.2.0, whose rows were a stem plus an ending: it
+    // must still restore as the words the user actually typed.
+    const read = parseBackup(
+      JSON.stringify({
+        app: 'verbcodex',
+        format: 1,
+        verbs: [
+          {
+            id: 'v1',
+            infinitive: 'aimer',
+            group: 1,
+            rows: [
+              { stem: 'aim', ending: 'e' },
+              { stem: '', ending: 'vais' },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(read.ok).toBe(true);
+    expect(read.ok && read.verbs[0].rows[0]).toEqual({ form: 'aime' });
+    expect(read.ok && read.verbs[0].rows[1]).toEqual({ form: 'vais' });
   });
 
   it('drops entries that cannot be read at all, keeping the rest', () => {

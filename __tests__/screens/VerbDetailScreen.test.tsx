@@ -3,7 +3,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TextInput } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { ConjugationRowView } from '../../src/components/ConjugationRowView';
-import { RadicalField } from '../../src/components/RadicalField';
 import { copy } from '../../src/copy';
 import { VerbDetailScreen } from '../../src/screens/VerbDetailScreen';
 import { verbStore } from '../../src/storage/verbStore';
@@ -62,48 +61,43 @@ async function openEntry() {
 
 /** The six rows as the screen currently hands them to the grid. */
 function rows(tree: ReactTestRenderer.ReactTestRenderer) {
-  return tree.root.findAllByType(ConjugationRowView).map(node => node.props.row);
+  return tree.root
+    .findAllByType(ConjugationRowView)
+    .map(node => node.props.row);
 }
 
 describe('VerbDetailScreen', () => {
-  it('opens on the radical the six rows already agree on', async () => {
+  it('shows the six recorded words the entry carries', async () => {
     const tree = await openEntry();
 
-    expect(tree.root.findByType(RadicalField).props.stem).toBe('aim');
+    expect(rows(tree).map(row => row.form)).toEqual([
+      'aime',
+      'aimes',
+      'aime',
+      'aimons',
+      'aimez',
+      'aiment',
+    ]);
   });
 
-  it('hands one radical to all six rows, and leaves the endings alone', async () => {
+  it('edits one row at a time and leaves the other five alone', async () => {
     const tree = await openEntry();
-    const before = rows(tree);
 
     await ReactTestRenderer.act(async () => {
-      tree.root.findByType(RadicalField).props.onChange('aimer');
+      tree.root
+        .findAllByType(ConjugationRowView)[4]
+        .props.onChangeForm('allez');
     });
 
     const after = rows(tree);
-    expect(after.map(row => row.stem)).toEqual(Array(6).fill('aimer'));
-    expect(after.map(row => row.ending)).toEqual(
-      before.map(row => row.ending),
-    );
-  });
-
-  it('still lets one row keep a radical of its own', async () => {
-    const tree = await openEntry();
-
-    await ReactTestRenderer.act(async () => {
-      tree.root.findByType(RadicalField).props.onChange('aim');
-    });
-    await ReactTestRenderer.act(async () => {
-      tree.root.findAllByType(ConjugationRowView)[4].props.onChangeStem('all');
-    });
-
-    // `aller` is recorded row by row: the fifth row keeps its own radical and
-    // the other five are untouched.
-    const after = rows(tree);
-    expect(after[4].stem).toBe('all');
-    expect(after.filter(row => row.stem === 'aim')).toHaveLength(5);
-    // Six rows that no longer agree: the field stops claiming a value.
-    expect(tree.root.findByType(RadicalField).props.stem).toBeNull();
+    expect(after[4].form).toBe('allez');
+    expect(after.slice(0, 4).map(row => row.form)).toEqual([
+      'aime',
+      'aimes',
+      'aime',
+      'aimons',
+    ]);
+    expect(after[5].form).toBe('aiment');
   });
 
   it('keeps every row in place during self-test and only sheds the fields', async () => {
@@ -114,13 +108,13 @@ describe('VerbDetailScreen', () => {
       tree.root.findByProps({ label: copy.selfTest }).props.onPress();
     });
 
-    // The card does not move: the radical row stays, read-only, and so do the
-    // six conjugation rows. The endings are the only thing that changes —
-    // they turn into masks.
-    const radical = tree.root.findByType(RadicalField);
-    expect(radical.props.editing).toBe(false);
+    // The card does not move: the six rows stay, read-only, and the words they
+    // hold are the only thing that changes — they turn into masks.
     expect(tree.root.findAllByType(ConjugationRowView)).toHaveLength(6);
     expect(tree.root.findAllByType(ConjugationRowView)[0].props.editing).toBe(
+      false,
+    );
+    expect(tree.root.findAllByType(ConjugationRowView)[0].props.revealed).toBe(
       false,
     );
     // Nothing on the card is typeable any more, and every row is still there.

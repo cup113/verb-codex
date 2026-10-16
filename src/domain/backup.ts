@@ -1,8 +1,15 @@
 import { Verb } from '../types';
 import { coerceVerb } from './verbs';
 
-/** Bumped only when the envelope's shape changes incompatibly. */
-export const BACKUP_FORMAT = 1;
+/**
+ * Bumped only when the envelope's shape changes incompatibly.
+ *
+ * Format 2 is the whole-word conjugation row: a format-1 file still imports —
+ * its `stem`/`ending` halves are joined on read — while a format-1 build
+ * refuses a format-2 file outright instead of quietly importing six blank
+ * rows.
+ */
+export const BACKUP_FORMAT = 2;
 const BACKUP_APP = 'verbcodex';
 
 export type Backup = {

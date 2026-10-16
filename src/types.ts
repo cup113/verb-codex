@@ -3,8 +3,11 @@ export type Group = 1 | 2 | 3;
 export type Tense = 'present';
 
 export type ConjugationRow = {
-  stem: string;
-  ending: string;
+  /**
+   * The conjugated form the user records for this pronoun — the whole word,
+   * exactly as written, in one piece.
+   */
+  form: string;
 };
 
 export type Verb = {
@@ -56,18 +59,12 @@ export const GROUP_TAB_LABELS: Record<Group, string> = {
 const ELISION = /^[aàâäeéèêëiîïoôöuùûüœh]/i;
 
 /**
- * The first letter the pronoun faces on screen: the stem's first letter, or —
- * when the stem is blank (aller is recorded as a bare ending, so is avoir's
- * "ai") — the ending's. The regex is anchored, so joining the two halves and
- * testing the result reads as exactly that.
+ * The first letter the pronoun faces on screen: the row's recorded form. The
+ * regex is anchored, so a blank row simply reads as "je".
  */
-export function pronounFor(
-  rowIndex: number,
-  stem: string,
-  ending: string,
-): string {
+export function pronounFor(rowIndex: number, form: string): string {
   if (rowIndex !== 0) {
     return PRONOUNS[rowIndex] ?? '';
   }
-  return ELISION.test(stem.trim() + ending.trim()) ? "j'" : 'je';
+  return ELISION.test(form.trim()) ? "j'" : 'je';
 }

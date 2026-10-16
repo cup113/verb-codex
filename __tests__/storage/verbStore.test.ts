@@ -5,7 +5,7 @@ import {
   VerbStorage,
   createVerbStore,
 } from '../../src/storage/verbStore';
-import { ROW_COUNT, Verb } from '../../src/types';
+import { Verb } from '../../src/types';
 
 const NOW = 1_700_000_000_000;
 
@@ -41,7 +41,7 @@ function seededCodex(): Verb[] {
       group: 1,
       tense: 'present',
       rows: emptyRows().map((row, index) =>
-        index === 0 ? { stem: 'aim', ending: 'e' } : row,
+        index === 0 ? { form: 'aime' } : row,
       ),
       note: '',
       createdAt: 0,
@@ -116,55 +116,16 @@ describe('createVerbStore', () => {
     const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
     const writesAfterAdd = writes.length;
 
-    store.setRow(verb.id, 0, { stem: 'aim' });
-    store.setRow(verb.id, 0, { ending: 'e' });
+    store.setRow(verb.id, 0, { form: 'aime' });
+    store.setRow(verb.id, 1, { form: 'aimes' });
 
     expect(writes.length).toBe(writesAfterAdd);
 
     await store.flush();
 
     expect(writes.length).toBe(writesAfterAdd + 1);
-    expect(persisted(entries)[0].rows[0]).toEqual({ stem: 'aim', ending: 'e' });
-  });
-
-  it('writes one radical into all six rows in a single write', async () => {
-    const { storage, entries, writes } = memoryStorage({
-      [SEEDED_KEY]: 'true',
-    });
-    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
-    await store.init();
-    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
-    const writesAfterAdd = writes.length;
-
-    store.setSharedStem(verb.id, 'aim');
-
-    // One keystroke is one pending write, not six.
-    expect(writes.length).toBe(writesAfterAdd);
-    expect(store.getSnapshot().verbs[0].rows.map(row => row.stem)).toEqual(
-      Array(ROW_COUNT).fill('aim'),
-    );
-
-    await store.flush();
-
-    expect(writes.length).toBe(writesAfterAdd + 1);
-    expect(persisted(entries)[0].rows.map(row => row.stem)).toEqual(
-      Array(ROW_COUNT).fill('aim'),
-    );
-  });
-
-  it('leaves the codex untouched when the radical names no entry', async () => {
-    const { storage, writes } = memoryStorage({ [SEEDED_KEY]: 'true' });
-    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
-    await store.init();
-    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
-    const writesAfterAdd = writes.length;
-
-    store.setSharedStem('nope', 'aim');
-    await store.flush();
-
-    expect(writes.length).toBe(writesAfterAdd);
-    expect(store.getSnapshot().verbs[0].id).toBe(verb.id);
-    expect(store.getSnapshot().verbs[0].rows[0].stem).toBe('');
+    expect(persisted(entries)[0].rows[0]).toEqual({ form: 'aime' });
+    expect(persisted(entries)[0].rows[1]).toEqual({ form: 'aimes' });
   });
 
   it('keeps typing that happened while a write was already under way', async () => {
@@ -173,14 +134,14 @@ describe('createVerbStore', () => {
     await store.init();
     const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
 
-    store.setRow(verb.id, 0, { stem: 'aim' });
+    store.setRow(verb.id, 0, { form: 'aim' });
     const inFlight = store.flush();
-    store.setRow(verb.id, 0, { ending: 'e' });
+    store.setRow(verb.id, 0, { form: 'aime' });
     await inFlight;
     await store.flush();
 
     const rows = persisted(entries)[0].rows;
-    expect(rows[0]).toEqual({ stem: 'aim', ending: 'e' });
+    expect(rows[0]).toEqual({ form: 'aime' });
   });
 
   it('survives a failing write and retries it on the next flush', async () => {
@@ -269,7 +230,7 @@ describe('createVerbStore', () => {
     const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
     await store.init();
 
-    store.setRow('missing', 0, { stem: 'aim' });
+    store.setRow('missing', 0, { form: 'aime' });
     store.setInfinitive('missing', 'aimer');
 
     expect(store.getSnapshot().verbs).toEqual([]);

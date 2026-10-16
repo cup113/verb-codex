@@ -14,11 +14,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { ConjugationRowView } from '../components/ConjugationRowView';
 import { OutlinedButton } from '../components/OutlinedButton';
-import { RadicalField } from '../components/RadicalField';
 import { confirmDestructive } from '../platform/confirmDestructive';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
-import { sharedStem } from '../domain/verbs';
 import { verbStore, useVerbState } from '../storage/verbStore';
 import type { RootStackParamList } from '../navigation';
 
@@ -156,15 +154,9 @@ export function VerbDetailScreen({ route, navigation }: Props) {
               <Text style={styles.tense}>{copy.tense}</Text>
             </View>
             <View style={styles.grid}>
-              {/* Recording starts with the radical: one stem for the six rows,
-                  each of them still editable on its own below. Self-test keeps
-                  the row in place and only makes it read-only — the card must
-                  not move when the endings are hidden. */}
-              <RadicalField
-                stem={sharedStem(verb.rows)}
-                editing={!testing}
-                onChange={text => verbStore.setSharedStem(verb.id, text)}
-              />
+              {/* One recorded word per pronoun, all in one colour. Self-test
+                  keeps every row in place and only makes it read-only — the
+                  card must not move when the forms are hidden. */}
               {verb.rows.map((row, index) => (
                 <ConjugationRowView
                   key={index}
@@ -173,11 +165,8 @@ export function VerbDetailScreen({ route, navigation }: Props) {
                   editing={!testing}
                   revealed={revealed.has(index)}
                   onReveal={() => reveal(index)}
-                  onChangeStem={text =>
-                    verbStore.setRow(verb.id, index, { stem: text })
-                  }
-                  onChangeEnding={text =>
-                    verbStore.setRow(verb.id, index, { ending: text })
+                  onChangeForm={text =>
+                    verbStore.setRow(verb.id, index, { form: text })
                   }
                 />
               ))}
