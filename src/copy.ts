@@ -1,14 +1,21 @@
 /** UI chrome, kept in French to match the notebook's own voice. */
 export const copy = {
-  title: 'Verbes',
+  greeting: 'Salut,',
+  namePlaceholder: 'votre nom',
   tense: 'Présent',
   searchPlaceholder: 'Chercher un mot',
   tip: 'Touchez pour modifier',
   tipLocked: 'Touchez une ligne pour révéler',
   newVerb: '+ Nouveau',
+  /** The header's dots: opens the menu that holds Sauvegarde. */
+  more: 'Plus',
+  menuDismiss: 'Fermer le menu',
   selfTest: "S'entraîner",
   revealAll: 'Tout révéler',
-  back: '‹ Verbes',
+  // The way back names where it goes: a group on the entry screen, and the
+  // plain word on the two screens that do not stand in a group at all.
+  backTo: (label: string) => `‹ ${label}`,
+  backFallback: 'Retour',
   emptyGroup: 'Aucun verbe dans ce groupe',
   emptySearch: 'Rien ne correspond dans ce groupe',
   emptyCodex: 'Votre codex est vide — touchez « + Nouveau »',
@@ -23,6 +30,10 @@ export const copy = {
   deleteBody: 'Cette entrée et ses six lignes seront effacées.',
   longPressHint: 'Appui long pour réordonner',
   dragHint: 'Maintenir et glisser pour réordonner',
+  // Said out loud for the completion mark, which is drawn rather than written:
+  // the row's own text no longer carries how much is on paper.
+  rowsRecorded: (filled: number, total: number) =>
+    `${filled} ligne${filled > 1 ? 's' : ''} sur ${total}`,
   masked: '…',
   noteLabel: 'Notes',
   notePlaceholder: 'Prononciation, usage, remarques…',

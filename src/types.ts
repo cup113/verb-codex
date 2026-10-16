@@ -53,6 +53,18 @@ export const GROUP_TAB_LABELS: Record<Group, string> = {
   3: '3e (Irrégulier)',
 };
 
+/**
+ * What the way back is called: the group the entry belongs to, because that is
+ * where the list was standing. Short on purpose — a back label is a signpost
+ * at the edge of a header, not a caption, and the tabs already spell the group
+ * out in full one screen earlier.
+ */
+export const GROUP_BACK_LABELS: Record<Group, string> = {
+  1: '1er',
+  2: '2e',
+  3: '3e',
+};
+
 // Elision is a display convenience only: the codex never judges French. A mute
 // "h" is elided, an aspirated one is not, and this heuristic cannot tell them
 // apart — the user's own recording stays untouched either way.

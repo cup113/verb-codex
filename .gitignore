@@ -85,3 +85,9 @@ yarn-error.log
 
 # Playwright MCP writes its page snapshots and console logs here.
 .playwright-mcp/
+
+# `tools/make-fonts.py` caches the 24 MB CJK variable font it instances from.
+.fonts-src/
+
+# pip's unpack/build directories, when the sandbox refuses to clean them up.
+.pip-tmp/

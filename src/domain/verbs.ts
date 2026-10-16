@@ -34,6 +34,15 @@ export function filledCount(verb: Verb): number {
   return verb.rows.filter(isRowFilled).length;
 }
 
+/**
+ * Whether all six rows hold a recorded word — the fact the list draws as a
+ * tick. Read out of the rows every time: there is no field to fall out of step
+ * with what was actually written.
+ */
+export function isComplete(verb: Verb): boolean {
+  return filledCount(verb) === ROW_COUNT;
+}
+
 export function withRow(
   verb: Verb,
   index: number,

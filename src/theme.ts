@@ -14,10 +14,26 @@ export const colors = {
  * Static TTF instances bundled in android/app/src/main/assets/fonts. Android
  * names a family after its file, so each weight is its own family and styles
  * never set fontWeight — that way nothing is silently synthesised.
+ *
+ * The two serif weights are the merged Latin-and-hanzi faces built by
+ * `tools/make-fonts.py`. Android resolves `fontFamily` to a single family, so
+ * without the merge a Chinese note inside a Newsreader line would change face
+ * mid-sentence. The web has a fallback list, but the second family there is
+ * declared behind a `unicode-range` (web/fonts.css), so a browser that renders
+ * no hanzi downloads none of that weight.
  */
+const serifFamily =
+  Platform.OS === 'web'
+    ? 'NewsreaderRegular, NewsreaderHanRegular'
+    : 'NewsreaderHanRegular';
+const serifMediumFamily =
+  Platform.OS === 'web'
+    ? 'NewsreaderMedium, NewsreaderHanMedium'
+    : 'NewsreaderHanMedium';
+
 export const fonts = {
-  serif: 'NewsreaderRegular',
-  serifMedium: 'NewsreaderMedium',
+  serif: serifFamily,
+  serifMedium: serifMediumFamily,
   serifItalic: 'NewsreaderItalic',
   mono: 'JetBrainsMonoRegular',
   monoMedium: 'JetBrainsMonoMedium',

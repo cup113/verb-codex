@@ -15,9 +15,11 @@ import { Screen } from '../components/Screen';
 import { ConjugationRowView } from '../components/ConjugationRowView';
 import { OutlinedButton } from '../components/OutlinedButton';
 import { confirmDestructive } from '../platform/confirmDestructive';
+import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
+import { GROUP_BACK_LABELS } from '../types';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerbDetail'>;
@@ -29,6 +31,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(
     () => new Set<number>(),
   );
+  useBlurFocusedInputOnKeyboardHide();
 
   const exitTest = useCallback(() => {
     setTesting(false);
@@ -68,13 +71,18 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     });
   };
 
+  // The way back names the group this entry stands in — the list it came from.
+  // An entry that is already gone (deleted while its screen was still up) has
+  // no group left to name, so it falls back to the plain word.
   const back = (
     <Pressable
       onPress={() => navigation.goBack()}
       hitSlop={10}
       style={styles.backRow}
     >
-      <Text style={styles.back}>{copy.back}</Text>
+      <Text style={styles.back}>
+        {copy.backTo(verb ? GROUP_BACK_LABELS[verb.group] : copy.backFallback)}
+      </Text>
     </Pressable>
   );
 
@@ -245,11 +253,18 @@ const styles = StyleSheet.create({
   infinitiveInput: {
     ...serif(24, { letterSpacing: 0.5 }),
     flex: 1,
+    // Only the web needs this: an <input> there will not shrink below the
+    // browser's default field width, which squeezed "Présent" into a box
+    // narrower than its own text and pushed the last letters past the card.
+    minWidth: 0,
     padding: 0,
     margin: 0,
   },
   tense: {
     ...mono(11, { letterSpacing: 1, textTransform: 'uppercase' }),
+    // The label is a fixed seven letters and must never be the thing that
+    // gives way: the field beside it shrinks instead.
+    flexShrink: 0,
   },
   grid: {
     gap: 12,

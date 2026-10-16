@@ -8,6 +8,11 @@ import { coerceVerb } from './verbs';
  * its `stem`/`ending` halves are joined on read — while a format-1 build
  * refuses a format-2 file outright instead of quietly importing six blank
  * rows.
+ *
+ * The owner's name was added without a bump, because nothing is lost in either
+ * direction: an older build reads such a file as it always read one (the extra
+ * field is simply not looked at, and every entry is restored), and this build
+ * reads a file without the field as a codex that never had a name recorded.
  */
 export const BACKUP_FORMAT = 2;
 const BACKUP_APP = 'verbcodex';
@@ -16,6 +21,8 @@ export type Backup = {
   app: string;
   format: number;
   exportedAt: string;
+  /** The name the codex greets its owner by, when one has been recorded. */
+  owner?: string;
   verbs: Verb[];
 };
 
@@ -23,11 +30,18 @@ export type Backup = {
  * The whole codex as one file. Indented on purpose: it is meant to be readable
  * (and diffable) by the person who owns it, not just by the app.
  */
-export function serializeBackup(verbs: Verb[], exportedAt: string): string {
+export function serializeBackup(
+  verbs: Verb[],
+  exportedAt: string,
+  owner: string,
+): string {
   const backup: Backup = {
     app: BACKUP_APP,
     format: BACKUP_FORMAT,
     exportedAt,
+    // Left out rather than written empty: the field says "this codex has a
+    // name", and a blank one is not that statement.
+    ...(owner === '' ? {} : { owner }),
     verbs,
   };
   return `${JSON.stringify(backup, null, 2)}\n`;
@@ -46,7 +60,13 @@ export type BackupProblem =
   | 'no-verbs';
 
 export type BackupRead =
-  | { ok: true; verbs: Verb[]; exportedAt: string | null }
+  | {
+      ok: true;
+      verbs: Verb[];
+      exportedAt: string | null;
+      /** `null` when the file records no name — see `readOwner`. */
+      owner: string | null;
+    }
   | { ok: false; problem: BackupProblem };
 
 /**
@@ -73,7 +93,7 @@ export function parseBackup(text: string): BackupRead {
   if (Array.isArray(parsed)) {
     const verbs = readVerbs(parsed);
     return verbs.length > 0
-      ? { ok: true, verbs, exportedAt: null }
+      ? { ok: true, verbs, exportedAt: null, owner: null }
       : { ok: false, problem: 'no-verbs' };
   }
   if (typeof parsed !== 'object' || parsed === null) {
@@ -98,7 +118,23 @@ export function parseBackup(text: string): BackupRead {
     verbs,
     exportedAt:
       typeof envelope.exportedAt === 'string' ? envelope.exportedAt : null,
+    owner: readOwner(envelope),
   };
+}
+
+/**
+ * The owner's name out of an envelope, when it carries a usable one.
+ *
+ * The field is optional and post-dates format 2, so its absence is ordinary.
+ * A blank name counts as absence too: the reader's caller treats `null` as
+ * "leave the name alone", and an empty field must never erase a recorded one.
+ */
+function readOwner(envelope: Record<string, unknown>): string | null {
+  if (typeof envelope.owner !== 'string') {
+    return null;
+  }
+  const owner = envelope.owner.trim();
+  return owner === '' ? null : owner;
 }
 
 function readVerbs(values: unknown[]): Verb[] {

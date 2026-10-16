@@ -96,6 +96,10 @@ const styles = StyleSheet.create({
   },
   formInput: {
     flex: 1,
+    // The same web-only floor the list's fields carry: without it a narrow
+    // phone gives the input less room than the browser's default field width
+    // and the row overflows instead of the field shrinking.
+    minWidth: 0,
   },
   // The whole recorded word, one colour: no stem/ending two-tone. It keeps the
   // ending's terracotta, so the word does not change colour between editing

@@ -28,7 +28,7 @@ describe('serializeBackup', () => {
   it('round-trips every field of every entry', () => {
     const verbs = [verb(), verb({ id: 'v2', infinitive: 'finir', group: 2 })];
 
-    const read = parseBackup(serializeBackup(verbs, EXPORTED_AT));
+    const read = parseBackup(serializeBackup(verbs, EXPORTED_AT, ''));
 
     expect(read.ok).toBe(true);
     expect(read.ok && read.verbs).toEqual(verbs);
@@ -36,7 +36,7 @@ describe('serializeBackup', () => {
   });
 
   it('indents the file, so its owner can read and diff it', () => {
-    expect(serializeBackup([verb()], EXPORTED_AT)).toContain(
+    expect(serializeBackup([verb()], EXPORTED_AT, '')).toContain(
       '\n  "app": "verbcodex"',
     );
   });
@@ -45,7 +45,19 @@ describe('serializeBackup', () => {
     // Pinned as a literal on purpose: this is the number an older install
     // reads before it decides to refuse the file outright rather than import
     // six blank rows.
-    expect(serializeBackup([verb()], EXPORTED_AT)).toContain('"format": 2');
+    expect(serializeBackup([verb()], EXPORTED_AT, '')).toContain('"format": 2');
+  });
+
+  it('carries the name the codex greets its owner by', () => {
+    const read = parseBackup(serializeBackup([verb()], EXPORTED_AT, 'Camille'));
+
+    expect(read.ok && read.owner).toBe('Camille');
+  });
+
+  it('leaves the field out when no name has been recorded', () => {
+    // The field states "this codex has a name". An empty one would state a
+    // name that is blank, and importing it must not erase the reader's own.
+    expect(serializeBackup([verb()], EXPORTED_AT, '')).not.toContain('owner');
   });
 });
 
@@ -55,6 +67,45 @@ describe('parseBackup', () => {
 
     expect(read.ok && read.verbs.map(v => v.infinitive)).toEqual(['aimer']);
     expect(read.ok && read.exportedAt).toBeNull();
+    expect(read.ok && read.owner).toBeNull();
+  });
+
+  it('reads a file written before the owner field as one with no name', () => {
+    // Which is every backup exported by v0.3.0 and earlier: the field simply
+    // is not there, and every entry still restores.
+    const read = parseBackup(
+      JSON.stringify({
+        app: 'verbcodex',
+        format: 2,
+        exportedAt: EXPORTED_AT,
+        verbs: [verb()],
+      }),
+    );
+
+    expect(read.ok && read.owner).toBeNull();
+    expect(read.ok && read.verbs.map(v => v.infinitive)).toEqual(['aimer']);
+  });
+
+  it('trims the name it restores, and treats a blank one as none at all', () => {
+    const trimmed = parseBackup(
+      JSON.stringify({
+        app: 'verbcodex',
+        format: 2,
+        owner: '  Camille  ',
+        verbs: [verb()],
+      }),
+    );
+    expect(trimmed.ok && trimmed.owner).toBe('Camille');
+
+    const blank = parseBackup(
+      JSON.stringify({
+        app: 'verbcodex',
+        format: 2,
+        owner: '   ',
+        verbs: [verb()],
+      }),
+    );
+    expect(blank.ok && blank.owner).toBeNull();
   });
 
   it('coerces a partial entry instead of failing the whole file', () => {

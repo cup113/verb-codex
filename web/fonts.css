@@ -1,7 +1,16 @@
 /*
- * The same five static instances the Android build bundles. Each weight is its
- * own family, exactly as on Android, so no style ever sets fontWeight.
+ * The same static instances the Android build bundles. Each weight is its own
+ * family, exactly as on Android, so no style ever sets fontWeight.
  * The URLs stay relative so Vite fingerprints and emits the binaries.
+ *
+ * The two `…Han…` faces are Newsreader with the GB2312 hanzi merged in
+ * (tools/make-fonts.py). They are declared last and behind a `unicode-range`,
+ * which is a download fence rather than a preference: the browser fetches one
+ * only once a character inside that range is actually rendered, so a codex
+ * written entirely in French never pays those 3 MB. French punctuation — « »,
+ * the apostrophe, the em dash — is deliberately *outside* the range: at those
+ * codepoints Chinese and French share glyphs, and the notebook's own serif
+ * should win in the French text that carries its voice.
  */
 @font-face {
   font-family: 'NewsreaderRegular';
@@ -41,4 +50,31 @@
   font-weight: 500;
   font-style: normal;
   font-display: swap;
+}
+
+/*
+ * One range for both hanzi faces: the ideographs and the punctuation that
+ * belongs to them. Everything a French line can contain on its own is left
+ * out on purpose (see the note above).
+ */
+@font-face {
+  font-family: 'NewsreaderHanRegular';
+  src: url('../assets/fonts/NewsreaderHanRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+2460-24FF, U+2500-257F, U+25A0-25FF, U+2605-2606,
+    U+2E80-2EFF, U+3000-303F, U+3200-33FF, U+4E00-9FFF, U+FE30-FE4F,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: 'NewsreaderHanMedium';
+  src: url('../assets/fonts/NewsreaderHanMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+2460-24FF, U+2500-257F, U+25A0-25FF, U+2605-2606,
+    U+2E80-2EFF, U+3000-303F, U+3200-33FF, U+4E00-9FFF, U+FE30-FE4F,
+    U+FF00-FFEF;
 }

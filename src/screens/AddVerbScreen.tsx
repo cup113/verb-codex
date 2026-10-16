@@ -15,6 +15,7 @@ import { OutlinedButton } from '../components/OutlinedButton';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, serif } from '../theme';
 import { verbStore } from '../storage/verbStore';
+import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { Group, GROUPS, GROUP_LABELS } from '../types';
 import type { RootStackParamList } from '../navigation';
 
@@ -26,6 +27,7 @@ export function AddVerbScreen({ navigation, route }: Props) {
   // needs no second tap; the choice stays editable below.
   const [group, setGroup] = useState<Group>(route.params.group);
   const canCreate = infinitive.trim() !== '';
+  useBlurFocusedInputOnKeyboardHide();
 
   // Recording lands straight on the entry, with its six rows still blank.
   const create = () => {

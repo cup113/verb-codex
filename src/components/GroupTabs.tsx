@@ -51,7 +51,9 @@ const styles = StyleSheet.create({
   index: {
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
-    marginBottom: 24,
+    // The search box sits directly under this strip now, so the gap is what
+    // separates two surfaces rather than two rules.
+    marginBottom: 14,
   },
   row: {
     gap: 8,

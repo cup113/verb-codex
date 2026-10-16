@@ -107,6 +107,27 @@ export default defineConfig({
         // lists the manifest and its icons, which duplicates five entries in
         // the generated precache list — harmless, and workbox keys them by URL.
         globPatterns: ['**/*.{js,css,html,ttf,ico,png,webmanifest}'],
+        /*
+         * The two merged Latin-and-hanzi faces are 3.5 MB apiece, and a browser
+         * asks for one only once a hanzi is actually rendered (`unicode-range`
+         * in web/fonts.css). Precaching them would spend that download on every
+         * install, French-only ones included, so they are cached on first use
+         * instead: the first Chinese note costs a download, and every render
+         * after it is offline like the rest of the app.
+         */
+        globIgnores: ['**/NewsreaderHan*.ttf'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/NewsreaderHan[^/]*\.ttf$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'verbcodex-hanzi',
+              // Two weights, plus room for the hashed names a new build emits.
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
         // There is no routing, but the app is reachable as `/?v=4` (and as any
         // future deep link), and workbox does not match a precached entry
         // across an unknown query string — so navigations to the root fall back

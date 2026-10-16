@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { colors } from './src/theme';
 import { verbStore } from './src/storage/verbStore';
+import { ownerStore } from './src/storage/ownerStore';
 import { VerbListScreen } from './src/screens/VerbListScreen';
 import { VerbDetailScreen } from './src/screens/VerbDetailScreen';
 import { AddVerbScreen } from './src/screens/AddVerbScreen';
@@ -31,6 +32,7 @@ const paperTheme: Theme = {
 function App() {
   useEffect(() => {
     verbStore.init();
+    ownerStore.init();
     // A no-op on Android, an actual request on the web: browser storage is
     // best-effort unless the origin asks otherwise.
     requestPersistentStorage();
@@ -39,6 +41,7 @@ function App() {
     const subscription = AppState.addEventListener('change', state => {
       if (state !== 'active') {
         verbStore.flush();
+        ownerStore.flush();
       }
     });
     return () => subscription.remove();

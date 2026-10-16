@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReactTestRenderer from 'react-test-renderer';
@@ -7,9 +7,11 @@ import { SearchField } from '../../src/components/SearchField';
 import { VerbList } from '../../src/components/VerbList';
 import { VerbRow } from '../../src/components/VerbRow';
 import { GroupTabs } from '../../src/components/GroupTabs';
+import { MoreButton, MoreMenu } from '../../src/components/MoreMenu';
 import { copy } from '../../src/copy';
 import { VerbListScreen } from '../../src/screens/VerbListScreen';
 import { verbStore } from '../../src/storage/verbStore';
+import { ownerStore } from '../../src/storage/ownerStore';
 
 type ScreenProps = React.ComponentProps<typeof VerbListScreen>;
 
@@ -30,9 +32,11 @@ afterEach(() => {
 });
 
 async function renderList() {
-  // The store is the app singleton, so the codex it loads is the real one.
+  // The stores are the app singletons, so the codex and the name they hand the
+  // screen are the real ones.
   await ReactTestRenderer.act(async () => {
     await verbStore.init();
+    await ownerStore.init();
   });
   const navigation = {
     navigate: jest.fn(),
@@ -89,7 +93,7 @@ describe('VerbListScreen', () => {
     const { tree } = await renderList();
     const screen = screenText(tree);
 
-    expect(screen).toContain('Verbes');
+    expect(screen).toContain('Salut,');
     expect(screen).toContain('aimer');
     expect(screen).toContain('01 / 03');
     // Only the first group is on show, so a second-group verb stays out.
@@ -198,5 +202,81 @@ describe('VerbListScreen', () => {
     expect(tree.root.findByType(SearchField).props.value).toBe('');
     expect(tree.root.findAllByType(VerbRow)).toHaveLength(1);
     expect(screenText(tree)).toContain('aimer');
+  });
+
+  it('keeps the name on the owner line, trimmed, once it is confirmed', async () => {
+    const { tree } = await renderList();
+    const line = () =>
+      tree.root
+        .findAllByType(TextInput)
+        .find(node => node.props.placeholder === copy.namePlaceholder);
+
+    expect(line()?.props.value).toBe('');
+
+    // While the field has focus it holds exactly what was typed — spaces and
+    // all — so trimming on commit cannot eat the space between two words.
+    ReactTestRenderer.act(() => {
+      line()!.props.onFocus();
+      line()!.props.onChangeText('  Camille ');
+    });
+    expect(line()!.props.value).toBe('  Camille ');
+
+    ReactTestRenderer.act(() => {
+      line()!.props.onBlur();
+    });
+
+    expect(line()!.props.value).toBe('Camille');
+    expect(ownerStore.getSnapshot().owner).toBe('Camille');
+
+    // The store is shared with the rest of this file: leave it as it was found.
+    await ReactTestRenderer.act(async () => {
+      ownerStore.setOwner('');
+      await ownerStore.flush();
+    });
+  });
+
+  it('puts the search between the group tabs and the entries', async () => {
+    const { tree } = await renderList();
+
+    const order = tree.root
+      .findAll(
+        node =>
+          node.type === GroupTabs ||
+          node.type === SearchField ||
+          node.type === VerbList,
+      )
+      .map(node => (node.type as { name: string }).name);
+
+    expect(order).toEqual(['GroupTabs', 'SearchField', 'VerbList']);
+  });
+
+  it('keeps Sauvegarde in the ⋯ menu rather than in the header', async () => {
+    const { tree, navigation } = await renderList();
+
+    // Closed: neither the menu nor its label is on paper.
+    expect(tree.root.findByType(MoreMenu).props.visible).toBe(false);
+    expect(screenText(tree)).not.toContain(copy.backupLink);
+
+    ReactTestRenderer.act(() => {
+      tree.root.findByType(MoreButton).props.onPress();
+    });
+
+    expect(tree.root.findByType(MoreMenu).props.visible).toBe(true);
+    expect(screenText(tree)).toContain(copy.backupLink);
+
+    const label = tree.root
+      .findAllByType(Text)
+      .find(node => node.props.children === copy.backupLink);
+    let pressable = label!.parent;
+    while (pressable && typeof pressable.props.onPress !== 'function') {
+      pressable = pressable.parent;
+    }
+    ReactTestRenderer.act(() => {
+      pressable!.props.onPress();
+    });
+
+    // Choosing it opens the backup screen and closes the menu behind itself.
+    expect(navigation.navigate).toHaveBeenCalledWith('Backup');
+    expect(tree.root.findByType(MoreMenu).props.visible).toBe(false);
   });
 });

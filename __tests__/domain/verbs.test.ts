@@ -3,6 +3,7 @@ import {
   emptyRows,
   filledCount,
   insertionIndex,
+  isComplete,
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
@@ -230,6 +231,33 @@ describe('filledCount', () => {
     );
 
     expect(filledCount(verb)).toBe(0);
+  });
+});
+
+describe('isComplete', () => {
+  it('is true only once every one of the six rows is written', () => {
+    const empty = createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW });
+    expect(isComplete(empty)).toBe(false);
+
+    const five = [0, 1, 2, 3, 4].reduce(
+      (verb, index) => withRow(verb, index, { form: 'aime' }, NOW + index),
+      empty,
+    );
+    expect(isComplete(five)).toBe(false);
+
+    const six = withRow(five, 5, { form: 'aiment' }, NOW + 5);
+    expect(isComplete(six)).toBe(true);
+  });
+
+  it('does not count a row holding only whitespace', () => {
+    const empty = createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW });
+    const fiveAndABlank = [0, 1, 2, 3, 4].reduce(
+      (verb, index) => withRow(verb, index, { form: 'aime' }, NOW + index),
+      empty,
+    );
+    const blanked = withRow(fiveAndABlank, 5, { form: '  ' }, NOW + 5);
+
+    expect(isComplete(blanked)).toBe(false);
   });
 });
 

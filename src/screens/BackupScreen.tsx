@@ -21,9 +21,11 @@ import {
 import { backupFile } from '../platform/backupFile';
 import { confirmDestructive } from '../platform/confirmDestructive';
 import { requestPersistentStorage } from '../platform/persistentStorage';
+import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
+import { ownerStore, useOwnerState } from '../storage/ownerStore';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Backup'>;
@@ -38,6 +40,8 @@ const problemText: Record<BackupProblem, string> = {
 
 export function BackupScreen({ navigation }: Props) {
   const { verbs } = useVerbState();
+  const { owner } = useOwnerState();
+  useBlurFocusedInputOnKeyboardHide();
   const [pasted, setPasted] = useState('');
   const [status, setStatus] = useState<{ good: boolean; text: string } | null>(
     null,
@@ -60,8 +64,10 @@ export function BackupScreen({ navigation }: Props) {
 
   const exportCodex = async () => {
     const exportedAt = new Date().toISOString();
+    // The name goes with the codex: it is what the greeting reads on the device
+    // the file is restored to.
     await backupFile.exportBackup(
-      serializeBackup(verbs, exportedAt),
+      serializeBackup(verbs, exportedAt, owner),
       backupFileName(exportedAt),
     );
     setStatus({ good: true, text: copy.exportDone(verbs.length) });
@@ -82,6 +88,12 @@ export function BackupScreen({ navigation }: Props) {
       cancelLabel: copy.cancel,
       onConfirm: () => {
         verbStore.replaceAll(read.verbs).then(() => {
+          // A name that travelled with the codex is part of what is being
+          // restored; a file without one leaves the greeting alone rather than
+          // erasing the name this device already knows.
+          if (read.owner !== null) {
+            ownerStore.setOwner(read.owner);
+          }
           setPasted('');
           setStatus({ good: true, text: copy.importDone(read.verbs.length) });
         });
@@ -110,7 +122,7 @@ export function BackupScreen({ navigation }: Props) {
           hitSlop={10}
           style={styles.backRow}
         >
-          <Text style={styles.back}>{copy.back}</Text>
+          <Text style={styles.back}>{copy.backTo(copy.backFallback)}</Text>
         </Pressable>
         <Text style={styles.title}>{copy.backupTitle}</Text>
         <ScrollView

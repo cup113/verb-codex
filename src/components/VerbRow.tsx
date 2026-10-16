@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ROW_COUNT, Verb } from '../types';
-import { filledCount } from '../domain/verbs';
+import { filledCount, isComplete } from '../domain/verbs';
+import { copy } from '../copy';
 import { cardSurface, colors, mono, serif } from '../theme';
 
 type Props = {
@@ -32,11 +33,19 @@ export function VerbRow({
   onLongPress,
   dragging = false,
 }: Props) {
+  const filled = filledCount(verb);
+  const complete = isComplete(verb);
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={400}
+      // The six rows are shown as a mark, not as text, so the count they stand
+      // for has to be said out loud here or it would be lost to a reader.
+      accessibilityLabel={`${verb.infinitive}, ${copy.rowsRecorded(
+        filled,
+        ROW_COUNT,
+      )}`}
       style={({ pressed }) => [
         styles.row,
         pressed && styles.pressed,
@@ -53,9 +62,12 @@ export function VerbRow({
           </Text>
         ) : null}
       </View>
-      <Text style={styles.progress}>
-        {filledCount(verb)} / {ROW_COUNT}
-      </Text>
+      {/* A filled codex is what this whole screen is for, so the state is drawn
+          the way a checked-off line in a notebook is: a tick, in the one warm
+          colour the paper uses. */}
+      <View style={styles.mark}>
+        {complete ? <View style={styles.tick} /> : <View style={styles.openRow} />}
+      </View>
       <Text style={styles.chevron}>›</Text>
     </Pressable>
   );
@@ -66,9 +78,9 @@ const styles = StyleSheet.create({
     ...cardSurface,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 11,
     paddingHorizontal: 18,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   pressed: {
     opacity: 0.75,
@@ -79,7 +91,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderColor: colors.terracotta,
   },
-  // The headword and its hint share the slack, so the count and the chevron
+  // The headword and its hint share the slack, so the mark and the chevron
   // stay put whether or not the row has something to explain.
   words: {
     flex: 1,
@@ -91,8 +103,41 @@ const styles = StyleSheet.create({
     ...mono(11),
     marginTop: 2,
   },
-  progress: {
-    ...mono(11),
+  mark: {
+    width: 18,
+    height: 18,
+  },
+  /*
+   * The tick is two borders of one box, turned 45° — drawn rather than typed,
+   * because a ✓ is a font's opinion and both faces here are Latin or hanzi.
+   *
+   * The placement is arithmetic, not taste: a 7x12 box rotated about its
+   * centre has its ink spanning y -1.8..6.7, i.e. ~2.5 below the box's own
+   * centre, so the box is parked 2.5 above the middle of its 18pt slot and the
+   * tick lands centred with the headword.
+   */
+  tick: {
+    position: 'absolute',
+    left: 5.5,
+    top: 0.5,
+    width: 7,
+    height: 12,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: colors.terracotta,
+    transform: [{ rotate: '45deg' }],
+  },
+  /** Still open: a ring, thinner and quieter than the tick it is waiting for. */
+  openRow: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.inkSecondary,
+    opacity: 0.5,
   },
   chevron: {
     ...serif(18, { color: colors.line }),

@@ -1,0 +1,96 @@
+import { useSyncExternalStore } from 'react';
+import { asyncStorageAdapter } from './asyncStorageAdapter';
+
+export const OWNER_KEY = 'verbcodex.owner.v1';
+
+/** The slice of key/value storage the owner needs; injected so tests stay native-free. */
+export type OwnerStorage = {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+};
+
+export type OwnerState = {
+  owner: string;
+  ready: boolean;
+};
+
+export type OwnerStore = {
+  subscribe(listener: () => void): () => void;
+  getSnapshot(): OwnerState;
+  init(): Promise<void>;
+  setOwner(owner: string): void;
+  flush(): Promise<void>;
+};
+
+/**
+ * The name the codex greets its owner by.
+ *
+ * One short string, so it is written the moment it is committed rather than
+ * debounced like the keystroke streams the verb store handles: there is
+ * nothing to coalesce, and a name that was typed and confirmed should not be
+ * waiting on a timer when the app is swiped away. The screen keeps the raw
+ * draft while the field has focus and calls this on blur — an empty name is a
+ * legitimate value, not a reason to keep the old one.
+ */
+export function createOwnerStore(storage: OwnerStorage): OwnerStore {
+  let owner = '';
+  let ready = false;
+  let snapshot: OwnerState = { owner, ready };
+  const listeners = new Set<() => void>();
+
+  function publish(): void {
+    snapshot = { owner, ready };
+    listeners.forEach(listener => listener());
+  }
+
+  function write(): Promise<void> {
+    // Spaces around a name are typing, not content: the codex records the name
+    // itself, so both the stored value and the greeting are trimmed.
+    return storage.setItem(OWNER_KEY, owner).catch(() => {
+      // Keep the greeting usable in memory; `flush` retries on the way out.
+    });
+  }
+
+  async function init(): Promise<void> {
+    let raw: string | null = null;
+    try {
+      raw = await storage.getItem(OWNER_KEY);
+    } catch {
+      raw = null;
+    }
+    owner = raw === null ? '' : raw.trim();
+    ready = true;
+    publish();
+  }
+
+  function setOwner(next: string): void {
+    const trimmed = next.trim();
+    if (trimmed === owner) {
+      return;
+    }
+    owner = trimmed;
+    publish();
+    write();
+  }
+
+  async function flush(): Promise<void> {
+    await write();
+  }
+
+  return {
+    subscribe: listener => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getSnapshot: () => snapshot,
+    init,
+    setOwner,
+    flush,
+  };
+}
+
+export const ownerStore = createOwnerStore(asyncStorageAdapter);
+
+export function useOwnerState(): OwnerState {
+  return useSyncExternalStore(ownerStore.subscribe, ownerStore.getSnapshot);
+}
