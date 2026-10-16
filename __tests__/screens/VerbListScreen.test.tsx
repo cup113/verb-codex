@@ -3,6 +3,8 @@ import { Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReactTestRenderer from 'react-test-renderer';
+import { SearchField } from '../../src/components/SearchField';
+import { VerbList } from '../../src/components/VerbList';
 import { VerbRow } from '../../src/components/VerbRow';
 import { GroupTabs } from '../../src/components/GroupTabs';
 import { copy } from '../../src/copy';
@@ -57,6 +59,16 @@ async function renderList() {
   const rendered = tree as ReactTestRenderer.ReactTestRenderer;
   mounted.push(rendered);
   return { tree: rendered, navigation };
+}
+
+/** Type into the list's search field, as a keystroke would. */
+function typeQuery(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  text: string,
+): void {
+  ReactTestRenderer.act(() => {
+    tree.root.findByType(SearchField).props.onChangeText(text);
+  });
 }
 
 /** Every string the screen actually puts on paper. */
@@ -119,5 +131,72 @@ describe('VerbListScreen', () => {
     });
 
     expect(navigation.navigate).toHaveBeenCalledWith('AddVerb', { group: 1 });
+  });
+
+  it('narrows the group to the entries whose own words match', async () => {
+    const { tree } = await renderList();
+    // Capitals on purpose: what was typed is folded before it is compared.
+    typeQuery(tree, 'AIMONS');
+
+    const rows = tree.root.findAllByType(VerbRow);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].props.verb.infinitive).toBe('aimer');
+    // The headword does not say why this entry is on show, so the row does.
+    expect(rows[0].props.hint).toBe('nous aimons');
+  });
+
+  it('matches the headword without having to explain itself', async () => {
+    const { tree } = await renderList();
+    typeQuery(tree, 'aim');
+
+    const rows = tree.root.findAllByType(VerbRow);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].props.hint).toBeUndefined();
+  });
+
+  it('keeps the search inside the group on show', async () => {
+    const { tree } = await renderList();
+    typeQuery(tree, 'finis');
+
+    // finir lives in the second group, so the first group has nothing to show.
+    expect(tree.root.findAllByType(VerbRow)).toHaveLength(0);
+    expect(screenText(tree)).toContain(copy.emptySearch);
+    expect(screenText(tree)).toContain('00 / 03');
+
+    await ReactTestRenderer.act(async () => {
+      tree.root.findByType(GroupTabs).props.onChange(2);
+    });
+
+    const rows = tree.root.findAllByType(VerbRow);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].props.verb.infinitive).toBe('finir');
+    expect(rows[0].props.hint).toBe('je finis');
+    // Switching tabs re-reads the same query rather than dropping it.
+    expect(tree.root.findByType(SearchField).props.value).toBe('finis');
+  });
+
+  it('stops offering to reorder while the list is a subset', async () => {
+    const { tree } = await renderList();
+    expect(tree.root.findByType(VerbList).props.reorderEnabled).toBe(true);
+
+    typeQuery(tree, 'aim');
+
+    // The drop's index and pitch belong to the group, not to the subset.
+    expect(tree.root.findByType(VerbList).props.reorderEnabled).toBe(false);
+    expect(screenText(tree)).not.toContain(copy.longPressHint);
+  });
+
+  it('clears the search and hands the whole group back', async () => {
+    const { tree } = await renderList();
+    typeQuery(tree, 'chanter');
+    expect(tree.root.findAllByType(VerbRow)).toHaveLength(0);
+
+    ReactTestRenderer.act(() => {
+      tree.root.findByType(SearchField).props.onClear();
+    });
+
+    expect(tree.root.findByType(SearchField).props.value).toBe('');
+    expect(tree.root.findAllByType(VerbRow)).toHaveLength(1);
+    expect(screenText(tree)).toContain('aimer');
   });
 });

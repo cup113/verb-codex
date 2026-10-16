@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ROW_COUNT, Verb } from '../types';
 import { filledCount } from '../domain/verbs';
 import { cardSurface, colors, mono, serif } from '../theme';
@@ -6,6 +6,12 @@ import { cardSurface, colors, mono, serif } from '../theme';
 type Props = {
   verb: Verb;
   onPress: () => void;
+  /**
+   * Why this entry is on the list, when the headword does not say it — a search
+   * that matched one of the six whole words. Absent the rest of the time, so a
+   * row is one line unless there is something to explain.
+   */
+  hint?: string;
   /**
    * A long press on this row. The native list passes an empty function on
    * purpose: picking the row up is the gesture-handler long press the list
@@ -22,6 +28,7 @@ type Props = {
 export function VerbRow({
   verb,
   onPress,
+  hint,
   onLongPress,
   dragging = false,
 }: Props) {
@@ -36,9 +43,16 @@ export function VerbRow({
         dragging && styles.dragging,
       ]}
     >
-      <Text style={styles.infinitive} numberOfLines={1}>
-        {verb.infinitive}
-      </Text>
+      <View style={styles.words}>
+        <Text style={styles.infinitive} numberOfLines={1}>
+          {verb.infinitive}
+        </Text>
+        {hint ? (
+          <Text style={styles.hint} numberOfLines={1}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
       <Text style={styles.progress}>
         {filledCount(verb)} / {ROW_COUNT}
       </Text>
@@ -65,9 +79,17 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderColor: colors.terracotta,
   },
+  // The headword and its hint share the slack, so the count and the chevron
+  // stay put whether or not the row has something to explain.
+  words: {
+    flex: 1,
+  },
   infinitive: {
     ...serif(22),
-    flex: 1,
+  },
+  hint: {
+    ...mono(11),
+    marginTop: 2,
   },
   progress: {
     ...mono(11),

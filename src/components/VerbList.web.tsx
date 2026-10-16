@@ -59,6 +59,8 @@ const DRAG_SOURCE: CSSProperties = {
 export function VerbList({
   verbs,
   empty,
+  hintOf,
+  reorderEnabled,
   onPressVerb,
   onReorder,
 }: VerbListProps) {
@@ -110,6 +112,11 @@ export function VerbList({
     event: ReactPointerEvent<HTMLDivElement>,
     verbId: string,
   ) => {
+    // A filtered list is a subset of the group, not its arrangement: arming a
+    // drag there would hand the drop to a slot that is not the one aimed at.
+    if (!reorderEnabled) {
+      return;
+    }
     // Only a mouse or trackpad arms a drag; a finger gets the list's scrolling
     // and nothing else.
     if (event.pointerType !== 'mouse' || event.button !== 0) {
@@ -205,8 +212,9 @@ export function VerbList({
         };
         return (
           <div
-            // Armed by the hold, not by the row being a row: see HOLD_MS.
-            draggable={isArmed}
+            // Armed by the hold, not by the row being a row: see HOLD_MS. And
+            // never while the list is a filtered subset: see reorderEnabled.
+            draggable={isArmed && reorderEnabled}
             onPointerDown={event => handlePointerDown(event, item.id)}
             onPointerMove={handlePointerMove}
             // A release over the row itself; a release anywhere else is caught
@@ -222,6 +230,7 @@ export function VerbList({
           >
             <VerbRow
               verb={item}
+              hint={hintOf(item) ?? undefined}
               // The hold that arms the drag is worth showing: this is the same
               // lifted edge the native row gets when it is picked up.
               dragging={isArmed || isDragging}

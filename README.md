@@ -15,6 +15,7 @@
 | 动作                    | 结果                                                                                                                                                                                                                                                                           |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 列表页三条分组标签      | 按 `1er (-er)` / `2e (-ir)` / `3e (Irrégulier)` 筛选（新增页里显示完整的 `1er Groupe (-er)`）；标签只是你给的分类，法典不据此推断变位                                                                                                                                          |
+| 列表页搜索框            | 在当前**分组**内即时过滤：匹配**不定式**与六行**整词**，忽略大小写与重音（`etre` 命中 `être`、`coeur` 命中 `cœur`）。命中整词时行下显示那个词（`nous aimons`），否则你不知道这条为什么在屏幕上；不搜**附注**。过滤期间**次序**重排与拖动提示一并停用——拖动落点的索引与行距属于分组，不属于子集。切分组标签不清空检索词，✕ 清空                                                                    |
 | 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）                                                                                                                                                                                                                       |
 | 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义                                                                                                                                        |
 | 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                                                                                                                                                             |
@@ -33,7 +34,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：75 个用例，覆盖领域逻辑（含备份信封、旧数据迁移与拖动自动滚动的算式）、存储、行组件、列表页与 App 装配
+npm test               # jest：100 个用例，覆盖领域逻辑（含备份信封、旧数据迁移、拖动自动滚动的算式与搜索的折叠/匹配）、存储、行组件、列表页、详情页与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -44,13 +45,14 @@ npm run lint
 App.tsx                     导航装配（native-stack）+ 启动时载入法典、切后台时落盘
 src/types.ts                领域类型、六行代词、分组标签、代词省音
 src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读盘（可单测，无原生依赖）
+src/domain/search.ts        纯逻辑：折叠（忽略大小写与重音）、匹配、命中提示、过滤（可单测，无原生依赖）
 src/domain/backup.ts        备份信封：序列化、文件名、容错解析（纯逻辑，可单测）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/platform/               平台分包：删除确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）、能否用鼠标拖动重排（`reorderByDrag`）
 src/data/seed.ts            首启的三条示例条目
 src/screens/                列表 / 详情（含自测态）/ 新增
-src/components/             Screen、分组标签、变位行、列表行、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
+src/components/             Screen、分组标签、搜索框、变位行、列表行、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
 web/main.tsx                web 入口（AppRegistry.runApplication）
 index.html                  web 挂载点（#root 必须是 flex 容器，原因见 spike 文档）
 vite.config.mts             web 构建配置（精确 alias / 扩展名顺序 / optimizeDeps 排除）
@@ -162,7 +164,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（75 个用例）                                                                                                                                   |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（100 个用例）                                                                                                                                  |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、5 个字体都在），并上传 `dist/` 作为构件                                                                                      |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |

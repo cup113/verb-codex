@@ -3,11 +3,13 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { Counter, GroupTabs } from '../components/GroupTabs';
+import { SearchField } from '../components/SearchField';
 import { VerbList } from '../components/VerbList';
 import { OutlinedButton } from '../components/OutlinedButton';
 import { copy } from '../copy';
 import { colors, fonts, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
+import { findVerbs, foldQuery, matchHint } from '../domain/search';
 import { reorderByDrag } from '../platform/reorderByDrag';
 import { Group } from '../types';
 import type { RootStackParamList } from '../navigation';
@@ -17,16 +19,29 @@ type Props = NativeStackScreenProps<RootStackParamList, 'VerbList'>;
 export function VerbListScreen({ navigation }: Props) {
   const { verbs, ready } = useVerbState();
   const [group, setGroup] = useState<Group>(1);
-  const shown = verbs.filter(verb => verb.group === group);
+  const [query, setQuery] = useState('');
+  // What the field holds is not what it filters by: a field holding nothing but
+  // spaces must not empty the list.
+  const folded = foldQuery(query);
+  const searching = folded !== '';
+  const shown = findVerbs(
+    verbs.filter(verb => verb.group === group),
+    query,
+  );
 
   /*
    * Ordering exists on both platforms, each with its own idiom: a long press
    * on a phone, a mouse drag in a browser. A touch browser can do neither, so
    * it is told nothing — the hint is a promise, and there would be nothing
    * behind it.
+   *
+   * Nor while the list is a filtered subset: the drop's index is a slot among
+   * the group's entries and its pitch is one row of the group, and a subset's
+   * rows are neither.
    */
-  const reorderHint =
-    Platform.OS !== 'web'
+  const reorderHint = searching
+    ? null
+    : Platform.OS !== 'web'
       ? copy.longPressHint
       : reorderByDrag
         ? copy.dragHint
@@ -68,12 +83,23 @@ export function VerbListScreen({ navigation }: Props) {
         </Pressable>
         <Counter shown={shown.length} total={verbs.length} />
       </View>
+      <SearchField
+        value={query}
+        onChangeText={setQuery}
+        onClear={() => setQuery('')}
+      />
       <GroupTabs active={group} onChange={setGroup} />
       <VerbList
         verbs={shown}
+        hintOf={verb => matchHint(verb, folded)}
+        reorderEnabled={!searching}
         empty={
           <Text style={styles.empty}>
-            {verbs.length === 0 ? copy.emptyCodex : copy.emptyGroup}
+            {verbs.length === 0
+              ? copy.emptyCodex
+              : searching
+                ? copy.emptySearch
+                : copy.emptyGroup}
           </Text>
         }
         onPressVerb={verb =>

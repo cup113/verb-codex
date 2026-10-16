@@ -18,6 +18,20 @@ import type { Verb } from '../types';
 export type VerbListProps = {
   verbs: Verb[];
   empty: ReactElement;
+  /**
+   * Why a row is on show, when the headword does not say it — a search that
+   * matched one of the six whole words. `null` on an ordinary row.
+   */
+  hintOf: (verb: Verb) => string | null;
+  /**
+   * Whether a row may be picked up and dragged.
+   *
+   * Off while the list is a filtered subset: `toIndex` is a slot among the
+   * group's entries, and a subset's rows are neither that slot nor one measured
+   * pitch apart once the matching rows carry a hint line — so the drop would
+   * land somewhere the user never aimed at.
+   */
+  reorderEnabled: boolean;
   onPressVerb: (verb: Verb) => void;
   /** Ordering is the native affordance; the web twin accepts and ignores it. */
   onReorder: (verbId: string, toIndex: number) => void;
@@ -93,6 +107,8 @@ type DraggableRowProps = {
   verb: Verb;
   rowIndex: number;
   lifted: boolean;
+  hint?: string;
+  reorderEnabled: boolean;
   onPress: () => void;
   onRowLayout: (height: number) => void;
   shared: DragShared;
@@ -111,6 +127,8 @@ function DraggableRow({
   verb,
   rowIndex,
   lifted,
+  hint,
+  reorderEnabled,
   onPress,
   onRowLayout,
   shared,
@@ -136,6 +154,7 @@ function DraggableRow({
   const pickUp = useMemo(
     () =>
       Gesture.Pan()
+        .enabled(reorderEnabled)
         .activateAfterLongPress(HOLD_MS)
         .onStart(() => {
           settling.value = false;
@@ -193,6 +212,7 @@ function DraggableRow({
       owner,
       pitch,
       release,
+      reorderEnabled,
       rowIndex,
       scrollOffset,
       scrollStart,
@@ -234,6 +254,7 @@ function DraggableRow({
       >
         <VerbRow
           verb={verb}
+          hint={hint}
           dragging={lifted}
           onPress={onPress}
           onLongPress={swallowed}
@@ -247,6 +268,8 @@ function DraggableRow({
 export function VerbList({
   verbs,
   empty,
+  hintOf,
+  reorderEnabled,
   onPressVerb,
   onReorder,
 }: VerbListProps) {
@@ -472,6 +495,8 @@ export function VerbList({
           verb={item}
           rowIndex={index}
           lifted={lifted === index}
+          hint={hintOf(item) ?? undefined}
+          reorderEnabled={reorderEnabled}
           onPress={() => onPressVerb(item)}
           onRowLayout={onRowLayout}
           shared={shared}

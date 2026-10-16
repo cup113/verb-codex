@@ -42,6 +42,13 @@ function textColors(tree: ReactTestRenderer.ReactTestRenderer): unknown[] {
     .map(node => StyleSheet.flatten(node.props.style)?.color);
 }
 
+/** The colour of the recorded word's field — a `TextInput`, not a `Text`. */
+function inputColors(tree: ReactTestRenderer.ReactTestRenderer): unknown[] {
+  return tree.root
+    .findAllByType(TextInput)
+    .map(node => StyleSheet.flatten(node.props.style)?.color);
+}
+
 describe('ConjugationRowView', () => {
   it('exposes the recorded word as one field while editing', () => {
     const { tree } = render();
@@ -82,17 +89,21 @@ describe('ConjugationRowView', () => {
     expect(texts(tree)).not.toContain(copy.masked);
   });
 
-  it('paints the whole word in one colour', () => {
-    // The user's own words: "the whole word in the same colour". A row that
-    // still split itself into a stem and an ending would show terracotta.
+  it("paints the whole word in one colour, the ending's terracotta", () => {
+    // The user's own words: "one recorded word, one colour". That colour is the
+    // one the ending used to carry — the headword keeps the ink — and the mask
+    // stands in for the word, so it is painted with it.
     const editing = render();
     const reading = render({ editing: false, revealed: true });
     const masked = render({ editing: false, revealed: false });
 
-    [editing.tree, reading.tree, masked.tree].forEach(tree => {
-      expect(textColors(tree)).not.toContain(colors.terracotta);
+    expect(inputColors(editing.tree)).toEqual([colors.terracotta]);
+    [reading.tree, masked.tree].forEach(tree => {
+      expect(textColors(tree)).toContain(colors.terracotta);
+      // A whole word back in ink is the design this replaced, so it is the
+      // regression this assertion is here to catch.
+      expect(textColors(tree)).not.toContain(colors.ink);
     });
-    expect(textColors(reading.tree)).toContain(colors.ink);
   });
 
   it('reveals the row the user touches, and only then', () => {

@@ -2,6 +2,7 @@
 export const copy = {
   title: 'Verbes',
   tense: 'Présent',
+  searchPlaceholder: 'Chercher un mot',
   tip: 'Touchez pour modifier',
   tipLocked: 'Touchez une ligne pour révéler',
   newVerb: '+ Nouveau',
@@ -9,6 +10,7 @@ export const copy = {
   revealAll: 'Tout révéler',
   back: '‹ Verbes',
   emptyGroup: 'Aucun verbe dans ce groupe',
+  emptySearch: 'Rien ne correspond dans ce groupe',
   emptyCodex: 'Votre codex est vide — touchez « + Nouveau »',
   addTitle: 'Nouveau verbe',
   infinitiveLabel: 'Infinitif',
