@@ -90,16 +90,18 @@ const styles = StyleSheet.create({
   // `flex: 1` also keeps the web honest: a bare <input> left to itself would
   // take the browser's default field width instead of the row's.
   input: {
-    ...mono(15, { color: colors.ink }),
+    ...mono(15, { color: colors.terracotta }),
     padding: 0,
     margin: 0,
   },
   formInput: {
     flex: 1,
   },
-  // The whole recorded word, one colour: no stem/ending two-tone.
+  // The whole recorded word, one colour: no stem/ending two-tone. It keeps the
+  // ending's terracotta, so the word does not change colour between editing
+  // and self-test.
   formText: {
-    ...mono(15, { color: colors.ink }),
+    ...mono(15, { color: colors.terracotta }),
     flexGrow: 1,
     flexBasis: 0,
   },
