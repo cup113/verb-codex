@@ -13,32 +13,68 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { ConjugationRowView } from '../components/ConjugationRowView';
+import { DictationRow } from '../components/DictationRow';
+import { VerdictStamp } from '../components/VerdictStamp';
 import { OutlinedButton } from '../components/OutlinedButton';
 import { confirmDestructive } from '../platform/confirmDestructive';
 import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
-import { GROUP_BACK_LABELS } from '../types';
+import { GROUP_BACK_LABELS, ROW_COUNT, pronounFor } from '../types';
+import { isComplete } from '../domain/verbs';
+import { checkPaper } from '../domain/dictation';
+import type { CheckedRow } from '../domain/dictation';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerbDetail'>;
 
+/**
+ * What the card is doing. The words on it are the same six rows throughout —
+ * only what they can do changes, so the card never moves.
+ */
+type Mode = 'view' | 'test' | 'write' | 'done';
+
+/** A flawless paper inks its six rows one after another, then stamps. */
+const SETTLE_STAGGER_MS = 90;
+const STAMP_LAG_MS = 200;
+
+const blankInputs = (): string[] =>
+  Array.from({ length: ROW_COUNT }, () => '');
+
+const blankVerdicts = (): CheckedRow[] =>
+  Array.from({ length: ROW_COUNT }, () => null);
+
 export function VerbDetailScreen({ route, navigation }: Props) {
   const { verbs } = useVerbState();
   const verb = verbs.find(item => item.id === route.params.verbId);
-  const [testing, setTesting] = useState(false);
+  const [mode, setMode] = useState<Mode>('view');
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(
     () => new Set<number>(),
   );
+  /** The words typed for a dictation, one per row; empty outside one. */
+  const [typed, setTyped] = useState<string[]>(blankInputs);
+  const [checked, setChecked] = useState<CheckedRow[]>(blankVerdicts);
+  /**
+   * Whether the paper was flawless when it was first checked. A round that
+   * needed correcting keeps this false to the end, so its stamp is the lesser
+   * one — see ADR 0002.
+   */
+  const [flawless, setFlawless] = useState(false);
   useBlurFocusedInputOnKeyboardHide();
 
-  const exitTest = useCallback(() => {
-    setTesting(false);
+  // Every exercise is left through here: nothing typed in a dictation is kept,
+  // so leaving the card and coming back starts a fresh paper. The codex keeps
+  // recorded words, never attempts at them.
+  const exitToView = useCallback(() => {
+    setMode('view');
     setRevealed(new Set<number>());
+    setTyped(blankInputs());
+    setChecked(blankVerdicts());
+    setFlawless(false);
   }, []);
 
-  // Android back leaves self-test before it leaves the entry. There is no
+  // Android back leaves an exercise before it leaves the entry. There is no
   // hardware key on the web, and react-native-web's stub only logs an error.
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -47,15 +83,15 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (!testing) {
+        if (mode === 'view') {
           return false;
         }
-        exitTest();
+        exitToView();
         return true;
       },
     );
     return () => subscription.remove();
-  }, [testing, exitTest]);
+  }, [mode, exitToView]);
 
   const confirmDelete = () => {
     if (!verb) {
@@ -98,6 +134,103 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     });
   };
 
+  const enterTest = () => {
+    setRevealed(new Set<number>());
+    setMode('test');
+  };
+
+  const enterWrite = () => {
+    setTyped(blankInputs());
+    setChecked(blankVerdicts());
+    setFlawless(false);
+    setMode('write');
+  };
+
+  const changeDictation = (index: number, text: string) => {
+    setTyped(previous =>
+      previous.map((word, i) => (i === index ? text : word)),
+    );
+    // Editing a crossed-out row withdraws its verdict: the next check judges
+    // the corrected word on its own, and the strike goes with the verdict.
+    setChecked(previous =>
+      previous.map((verdict, i) =>
+        i === index && verdict === 'bad' ? null : verdict,
+      ),
+    );
+  };
+
+  const verify = () => {
+    const result = checkPaper({
+      inputs: typed,
+      recorded: verb.rows.map(row => row.form),
+      previous: checked,
+    });
+    setChecked(result.verdicts);
+    setFlawless(result.flawless);
+    if (result.done) {
+      setMode('done');
+    }
+  };
+
+  const complete = isComplete(verb);
+  const dictating = mode === 'write' || mode === 'done';
+  const anyWrong = checked.includes('bad');
+
+  const buttons =
+    mode === 'view'
+      ? [
+          <OutlinedButton
+            key="write"
+            label={copy.dictate}
+            onPress={enterWrite}
+            disabled={!complete}
+          />,
+          <OutlinedButton
+            key="test"
+            label={copy.selfTest}
+            tone="terracotta"
+            onPress={enterTest}
+          />,
+        ]
+      : mode === 'test'
+      ? [
+          <OutlinedButton
+            key="reveal"
+            label={copy.revealAll}
+            onPress={exitToView}
+          />,
+        ]
+      : mode === 'write'
+      ? [
+          <OutlinedButton key="quit" label={copy.quit} onPress={exitToView} />,
+          <OutlinedButton
+            key="verify"
+            label={copy.verify}
+            tone="terracotta"
+            onPress={verify}
+          />,
+        ]
+      : [
+          <OutlinedButton key="again" label={copy.again} onPress={enterWrite} />,
+          <OutlinedButton
+            key="proceed"
+            label={copy.proceed}
+            tone="terracotta"
+            onPress={exitToView}
+          />,
+        ];
+
+  const tip =
+    mode === 'view'
+      ? copy.tip
+      : mode === 'test'
+      ? copy.tipLocked
+      : mode === 'write'
+      ? anyWrong
+        ? copy.tipCorrect
+        : copy.tipWrite
+      : '';
+
   return (
     // Edge-to-edge: without this the body keeps full height behind the IME,
     // the card fits inside it, and the last rows cannot be scrolled into view.
@@ -108,21 +241,10 @@ export function VerbDetailScreen({ route, navigation }: Props) {
       <Screen
         footer={
           <View style={styles.actions}>
-            <Text style={styles.tip}>
-              {testing ? copy.tipLocked : copy.tip}
+            <Text style={styles.tip} numberOfLines={2}>
+              {tip}
             </Text>
-            <OutlinedButton
-              label={testing ? copy.revealAll : copy.selfTest}
-              tone={testing ? 'ink' : 'terracotta'}
-              onPress={
-                testing
-                  ? exitTest
-                  : () => {
-                      setRevealed(new Set<number>());
-                      setTesting(true);
-                    }
-              }
-            />
+            <View style={styles.buttonRow}>{buttons}</View>
           </View>
         }
       >
@@ -143,7 +265,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
         >
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              {testing ? (
+              {mode !== 'view' ? (
                 <Text style={styles.infinitiveText} numberOfLines={1}>
                   {verb.infinitive}
                 </Text>
@@ -163,24 +285,52 @@ export function VerbDetailScreen({ route, navigation }: Props) {
             </View>
             <View style={styles.grid}>
               {/* One recorded word per pronoun, all in one colour. Self-test
-                  keeps every row in place and only makes it read-only — the
-                  card must not move when the forms are hidden. */}
-              {verb.rows.map((row, index) => (
-                <ConjugationRowView
-                  key={index}
-                  rowIndex={index}
-                  row={row}
-                  editing={!testing}
-                  revealed={revealed.has(index)}
-                  onReveal={() => reveal(index)}
-                  onChangeForm={text =>
-                    verbStore.setRow(verb.id, index, { form: text })
+                  keeps every row in place and only makes it read-only; a
+                  dictation empties the fields and fills them back in the
+                  user's own hand — the card must not move either way. */}
+              {dictating
+                ? verb.rows.map((row, index) => (
+                    <DictationRow
+                      key={index}
+                      pronoun={pronounFor(index, row.form)}
+                      // A finished paper shows the recorded words back, inked;
+                      // until then the row shows what the user typed.
+                      value={mode === 'done' ? row.form : typed[index]}
+                      verdict={checked[index] ?? null}
+                      settleDelay={
+                        flawless ? index * SETTLE_STAGGER_MS : 0
+                      }
+                      onChange={text => changeDictation(index, text)}
+                    />
+                  ))
+                : verb.rows.map((row, index) => (
+                    <ConjugationRowView
+                      key={index}
+                      rowIndex={index}
+                      row={row}
+                      editing={mode === 'view'}
+                      revealed={revealed.has(index)}
+                      onReveal={() => reveal(index)}
+                      onChangeForm={text =>
+                        verbStore.setRow(verb.id, index, { form: text })
+                      }
+                    />
+                  ))}
+            </View>
+            {mode === 'done' ? (
+              <View style={styles.verdictArea}>
+                <VerdictStamp
+                  tier={flawless ? 'flawless' : 'corrected'}
+                  delay={
+                    flawless
+                      ? ROW_COUNT * SETTLE_STAGGER_MS + STAMP_LAG_MS
+                      : STAMP_LAG_MS
                   }
                 />
-              ))}
-            </View>
+              </View>
+            ) : null}
           </View>
-          {testing ? null : (
+          {mode === 'view' ? (
             <View style={styles.noteCard}>
               <Text style={styles.noteLabel}>{copy.noteLabel}</Text>
               <TextInput
@@ -196,7 +346,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
                 underlineColorAndroid="transparent"
               />
             </View>
-          )}
+          ) : null}
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
@@ -269,6 +419,14 @@ const styles = StyleSheet.create({
   grid: {
     gap: 12,
   },
+  // Where the stamp lands: reserved whether or not a paper is finished, so the
+  // card does not jump the moment the last word settles.
+  verdictArea: {
+    marginTop: 16,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   noteCard: {
     ...cardSurface,
     marginTop: 12,
@@ -292,9 +450,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  // The hint gives way before the buttons do: it is a remark, they are the
+  // only way forward. Two of them sit in the footer now, not one.
   tip: {
     ...serif(12, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),
-    flexShrink: 1,
+    flex: 1,
     paddingRight: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 0,
   },
 });

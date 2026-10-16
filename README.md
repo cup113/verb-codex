@@ -6,9 +6,9 @@
 
 ## 它是什么，不是什么
 
-- **是**一本记录本：收录动词、逐行写下那个**整词**、另写一段自由**附注**，查看为主、自测为辅。
-- **不是**词典或判分器：法典不懂法语，不生成变位、不校验对错、不评分。自测只能"遮盖 + 点击揭晓"，比对对象是你自己写下的记录（见 [ADR 0001](docs/adr/0001-manual-memo-no-engine.md)）。
-- 完整术语（动词条目 / 整词 / 分组 / 自测 / 记录值）见 [CONTEXT.md](CONTEXT.md)。
+- **是**一本记录本：收录动词、逐行写下那个**整词**、另写一段自由**附注**，查看为主，**自测**与**默写**为辅。
+- **不是**词典，也不是法语老师：法典不懂法语，不生成变位、不内置任何变位规则。**自测**只能"遮盖 + 点击揭晓"；**默写**会判对错，但判的是"是否与你亲手写下的**记录值**一致"（`trim()` 后逐字一致，区分重音与大小写），不是"法语对不对"——标准是你的，不是它的（[ADR 0001](docs/adr/0001-manual-memo-no-engine.md)、[ADR 0002](docs/adr/0002-dictation-grades-against-recorded-values.md)）。
+- 完整术语（动词条目 / 整词 / 分组 / 自测 / 默写 / 记录值）见 [CONTEXT.md](CONTEXT.md)。
 
 ## 交互
 
@@ -20,11 +20,12 @@
 | 列表行左端的记号        | 六个**变位行**都写下了**整词**就是完整（画一个 ✓），否则未完整（画一个 ○）。这是从业已写下的**变位行**读出来的事实，不另存字段；记号是画出来的（字体里没有这两个字形），读数走无障碍标签（`6 lignes sur 6`）                                                                                                                                                                     |
 | 点击某行                | 进入该**动词条目**的查看界面（不定式与六行变位就地可改）。详情页左上角的返回标签写的是这个条目所属的**分组**（`‹ 1er`），不再是一个总称——法典里也收助动词，`Verbes` 名不副实                                                                                                                                                                                                     |
 | 详情页顶部「Supprimer」 | 删除该**动词条目**（确认后生效）。破坏性操作放在这里，是为了让列表行只剩“点按打开 / 长按拖动”两个手势，不必用计时器或位移阈值去消解歧义                                                                                                                                                                                                                                          |
-| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测时隐藏（提示与答案是同一张纸的两面）                                                                                                                                                                                                                                                                               |
+| 详情页「Notes」         | 卡片下方的多行自由文本框：记发音、用法、任何想留下的东西；自测与默写时都隐藏（提示与答案是同一张纸的两面）                                                                                                                                                                                                                                                                     |
 | 长按某行后拖动          | 在**分组**内重排**次序**，松手即落盘。Android：按住 400ms 拿起（**同一个手势**负责拿起与跟手；按住期间手指走过系统触摸阈值（touch slop，约 8dp）即失败，所以滑动列表不会误拿起）。桌面浏览器：按住 400ms 后拖动；触摸浏览器不提供（HTML5 拖放不响应手指），理由见 [docs/spike-web.md](docs/spike-web.md)                                                                         |
 | 标题行右侧的「⋯」       | 点开一个小菜单（目前只有一项）：`Sauvegarde` 导出 / 导入整本法典（JSON）；导入是替换并先确认（见「备份与恢复」一节）                                                                                                                                                                                                                                                             |
 | 「+ Nouveau」           | 输入不定式、选分组 → 直接落到新条目上填写（六行初始为空，每行显示 `…`）                                                                                                                                                                                                                                                                                                          |
-| 「S'entraîner」         | 进入自测：**整词**全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退自测，再退页面（Android 的硬件返回键；web 上没有这个键）                                                                                                                                                                                                                                     |
+| 「S'entraîner」         | 进入自测：**整词**全部遮为 `…`，点哪一行揭晓哪一行；「Tout révéler」退出。返回键先退练习（自测 / 默写），再退页面（Android 的硬件返回键；web 上没有这个键）                                                                                                                                                                                                                     |
+| 「Écrire」              | 进入**默写**：六个**变位行**清空，你逐行重写**整词**（人称代词仍留在眼前），写完按「Vérifier」**整卷批改**。判定拿你此刻写的去比你亲手写下的**记录值**（`trim()` 后逐字一致，区分重音与大小写，不做逐字符 diff）。错的行整词划线并抖一下、仍可编辑，改一个字划线即退场、下一轮重新判；对的行落墨锁定。六行全对后：首判全对盖 `✦ Sans faute ✦`，订正后全对盖次级的 `Bien corrigé`，然后「Encore」再来一张或「Continuer」回查看。六行没填满（列表上是 ○）时这个键置灰；**退出即焚**——默写不打分、不存次数、不留历史 |
 
 首次启动会写入三条示例条目（aimer / finir / aller，即 demo 卡片上的那三个），可随意修改或删除（删除在详情页顶部）；删空之后不会再次写入。
 
@@ -36,8 +37,8 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：127 个用例，覆盖领域逻辑（含备份信封、主人名、旧数据迁移、拖动自动滚动的算式与搜索的折叠/匹配）、
-                       #        存储（含主人名）、组件（变位行、列表行、搜索框、⋯ 菜单）、列表页、详情页与 App 装配
+npm test               # jest：159 个用例，覆盖领域逻辑（含备份信封、主人名、旧数据迁移、默写判定、拖动自动滚动的算式与搜索的折叠/匹配）、
+                       #        存储（含主人名）、组件（变位行、默写行、列表行、搜索框、⋯ 菜单）、列表页、详情页（含自测与默写）与 App 装配
 npm run typecheck      # tsc --noEmit
 npm run lint
 ```
@@ -50,13 +51,15 @@ src/types.ts                领域类型、六行代词、分组标签、代词�
 src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读盘（可单测，无原生依赖）
 src/domain/search.ts        纯逻辑：折叠（忽略大小写与重音）、匹配、命中提示、过滤（可单测，无原生依赖）
 src/domain/backup.ts        备份信封：序列化、文件名、容错解析（纯逻辑，可单测）
+src/domain/dictation.ts     纯逻辑：默写判定（trim 后逐字比对、逐行判、首判全对）（可单测，无原生依赖）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/storage/ownerStore.ts   **主人**名字的存储：一个键、立即落盘、不防抖（名字不是一个字一个字值得等的输入）
 src/platform/               平台分包：删除确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）、能否用鼠标拖动重排（`reorderByDrag`）、收起输入法时是否收起焦点（`blurOnKeyboardHide`）
 src/data/seed.ts            首启的三条示例条目
-src/screens/                列表 / 详情（含自测态）/ 新增
-src/components/             Screen、分组标签、搜索框、变位行、列表行、⋯ 菜单、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
+src/screens/                列表 / 详情（含自测与默写态）/ 新增
+src/components/             Screen、分组标签、搜索框、变位行、默写行、印章、列表行、⋯ 菜单、按钮；VerbList(.web) 是拖动列表及其 web 双胞胎
+docs/adr/                   决策记录：0001 不含变位引擎（判定没有外部标准）；0002 默写以**记录值**为唯一比对标准
 web/main.tsx                web 入口（AppRegistry.runApplication）
 index.html                  web 挂载点（#root 必须是 flex 容器，原因见 spike 文档）
 vite.config.mts             web 构建配置（精确 alias / 扩展名顺序 / optimizeDeps 排除）
@@ -148,7 +151,7 @@ python tools/make-icons.py     # 需要 Pillow
 
 ## Web / PWA
 
-`npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。功能齐备（列表、分组筛选、详情、附注、新增、自测、删除、持久化、搜索、导出/导入、**次序重排**），dev 与构建产物渲染逐像素一致。**次序**两端都能调，触发方式各随其平台：Android/iOS 长按拿起，桌面浏览器按住 400ms 后拖动（`VerbList.web.tsx`）——触摸浏览器仍不提供，因为 HTML5 拖放不响应手指，而把触摸拖拽做对（不伤滚动）是 RNGH 在原生侧才有的仲裁能力。
+`npm run web` 是 HMR 开发服务器，`npm run web:build` 产出可部署的 `dist/`。功能齐备（列表、分组筛选、详情、附注、新增、自测、**默写**、删除、持久化、搜索、导出/导入、**次序重排**），dev 与构建产物渲染逐像素一致。**次序**两端都能调，触发方式各随其平台：Android/iOS 长按拿起，桌面浏览器按住 400ms 后拖动（`VerbList.web.tsx`）——触摸浏览器仍不提供，因为 HTML5 拖放不响应手指，而把触摸拖拽做对（不伤滚动）是 RNGH 在原生侧才有的仲裁能力。
 
 web 的重排不走原生那套：原生列表由 reanimated 驱动，而 reanimated 4 的 worklet 变换进不了 Vite 管线（见 spike 文档）。这里改用浏览器自己的 HTML5 拖放，**不加任何依赖**。有一条实测得出的必要设计：浏览器在指针移动 **2px** 后就判定拖放开始，并**吞掉那一次点击**——所以行不是天生可拖，而是**按住 400ms** 才拿到 `draggable`。否则"点开条目"会被一次手抖抢走（实测：2px 抖动即不再跳转），而 2px 的误拖还可能落进某个缝隙、造成非本意的重排。
 
@@ -168,7 +171,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 | ------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 存储         | AsyncStorage（Room/SQLite，永不被系统清）     | localStorage；启动时申请 `navigator.storage.persist()`                                                              |
 | 删除确认     | `Alert.alert`                                 | `window.confirm`（RNW 的 `Alert.alert` 是空函数）                                                                   |
-| 返回键       | `BackHandler` 先退自测                        | 无此键；RNW 的桩只会 `console.error`，故不注册                                                                      |
+| 返回键       | `BackHandler` 先退练习（自测 / 默写）         | 无此键；RNW 的桩只会 `console.error`，故不注册                                                                      |
 | 备份落地     | 系统分享面板导出 + 粘贴导入                   | 真文件下载 / `<input type="file">`                                                                                  |
 | **次序**重排 | 按住 400ms 拿起后拖动（同一个手势判定与跟手） | 按住 400ms 后鼠标拖动（HTML5 拖放）；触摸浏览器不提这件事，提示词也不出现（`src/platform/reorderByDrag{,.web}.ts`） |
 
@@ -182,7 +185,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（127 个用例）                                                                                                                                  |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（159 个用例）                                                                                                                                  |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、7 个字体——含两个中文合体字——都在），并上传 `dist/` 作为构件                                                                  |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |

@@ -12,6 +12,18 @@ export const copy = {
   menuDismiss: 'Fermer le menu',
   selfTest: "S'entraîner",
   revealAll: 'Tout révéler',
+  /** Dictation: the six words are written from memory, then checked. */
+  dictate: 'Écrire',
+  quit: 'Quitter',
+  verify: 'Vérifier',
+  again: 'Encore',
+  proceed: 'Continuer',
+  tipWrite: 'Écrivez les six formes',
+  tipCorrect: 'Corrigez les lignes barrées',
+  // A teacher marks faults, not successes: the flawless paper gets the stamp
+  // the exercise is named after, a corrected one the smaller remark.
+  stampFlawless: '✦ Sans faute ✦',
+  stampCorrected: 'Bien corrigé',
   // The way back names where it goes: a group on the entry screen, and the
   // plain word on the two screens that do not stand in a group at all.
   backTo: (label: string) => `‹ ${label}`,

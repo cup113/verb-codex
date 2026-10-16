@@ -65,7 +65,7 @@ export default defineConfig({
         name: '变位法典',
         short_name: '变位法典',
         description:
-          'Carnet de conjugaison française — 手填的法语变位备忘录，查看为主、遮盖式自测为辅。',
+          'Carnet de conjugaison française — 手填的法语变位备忘录，查看为主，遮盖式自测与默写（逐字比对你写下的记录）为辅。',
         // The chrome and the notebook's own voice are French; the app's name is not.
         lang: 'fr',
         start_url: '/',
