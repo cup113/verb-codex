@@ -63,8 +63,9 @@ export function VerbRow({
         ) : null}
       </View>
       {/* A filled codex is what this whole screen is for, so the state is drawn
-          the way a checked-off line in a notebook is: a tick, in the one warm
-          colour the paper uses. */}
+          the way a checked-off line in a notebook is: a tick, in the accent
+          diluted to a lighter brown — a mark is a record the paper holds, not a
+          call to action. */}
       <View style={styles.mark}>
         {complete ? <View style={styles.tick} /> : <View style={styles.openRow} />}
       </View>
@@ -103,9 +104,24 @@ const styles = StyleSheet.create({
     ...mono(11),
     marginTop: 2,
   },
+  /*
+   * The column of marks is nudged as one, so the tick and the ring keep a
+   * single centre between them:
+   *
+   * * down 1.5, onto the row's chevron rather than its middle. Measured on the
+   *   web build, the tick's ink centre sat 0.4pt above the ›'s, and it still
+   *   read high — a check's mass lies in its long upstroke — so the tick lands
+   *   a hair below the ›'s centre, which is where a hand-drawn one sits.
+   * * in 1.5, so the tick does not crowd the › it has to be read against; the
+   *   chevron's own 8pt margin is what is left of that gap.
+   *
+   * Both are relative offsets, so neither moves the chevron nor the row.
+   */
   mark: {
     width: 18,
     height: 18,
+    top: 1.5,
+    left: -1.5,
   },
   /*
    * The tick is two borders of one box, turned 45° — drawn rather than typed,
@@ -114,7 +130,9 @@ const styles = StyleSheet.create({
    * The placement is arithmetic, not taste: a 7x12 box rotated about its
    * centre has its ink spanning y -1.8..6.7, i.e. ~2.5 below the box's own
    * centre, so the box is parked 2.5 above the middle of its 18pt slot and the
-   * tick lands centred with the headword.
+   * ink lands on that middle — which is where the › beside it sits. The
+   * column's own 1.5pt nudge is then what tips the tick a hair past the ›, as a
+   * hand-drawn one is.
    */
   tick: {
     position: 'absolute',
@@ -124,7 +142,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRightWidth: 2,
     borderBottomWidth: 2,
-    borderColor: colors.terracotta,
+    borderColor: colors.terracottaSoft,
     transform: [{ rotate: '45deg' }],
   },
   /** Still open: a ring, thinner and quieter than the tick it is waiting for. */

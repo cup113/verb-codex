@@ -201,7 +201,10 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   name: {
-    ...serif(26, { fontFamily: fonts.serifMedium, letterSpacing: -0.3 }),
+    // The name is the second half of one phrase, so it is set the way the
+    // greeting is: the codex's own italic. `serifMedium` is the face a
+    // *recorded* word wears, and the name is not one of those.
+    ...serif(26, { fontFamily: fonts.serifItalicHan, letterSpacing: -0.3 }),
     // A first name wide, and no wider: the blank is somewhere to write a name,
     // not a spacer that eats the row. A longer name scrolls inside it while it
     // is being typed, which is what any narrow field does.

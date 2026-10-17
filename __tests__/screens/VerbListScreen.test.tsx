@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReactTestRenderer from 'react-test-renderer';
@@ -9,6 +9,7 @@ import { VerbRow } from '../../src/components/VerbRow';
 import { GroupTabs } from '../../src/components/GroupTabs';
 import { MoreButton, MoreMenu } from '../../src/components/MoreMenu';
 import { copy } from '../../src/copy';
+import { fonts } from '../../src/theme';
 import { VerbListScreen } from '../../src/screens/VerbListScreen';
 import { verbStore } from '../../src/storage/verbStore';
 import { ownerStore } from '../../src/storage/ownerStore';
@@ -236,6 +237,19 @@ describe('VerbListScreen', () => {
       ownerStore.setOwner('');
       await ownerStore.flush();
     });
+  });
+
+  it("sets the owner's name in the codex's own italic", async () => {
+    const { tree } = await renderList();
+    const line = tree.root
+      .findAllByType(TextInput)
+      .find(node => node.props.placeholder === copy.namePlaceholder);
+
+    // The name is the second half of the greeting, so it is set in the same
+    // hand — and not in the face a *recorded* word wears.
+    const set = StyleSheet.flatten(line!.props.style);
+    expect(set.fontFamily).toBe(fonts.serifItalicHan);
+    expect(set.fontFamily).not.toBe(fonts.serifMedium);
   });
 
   it('puts the search between the group tabs and the entries', async () => {
