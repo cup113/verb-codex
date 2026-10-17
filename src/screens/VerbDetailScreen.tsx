@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -16,12 +16,18 @@ import { ConjugationRowView } from '../components/ConjugationRowView';
 import { DictationRow } from '../components/DictationRow';
 import { VerdictStamp } from '../components/VerdictStamp';
 import { OutlinedButton } from '../components/OutlinedButton';
-import { confirmDestructive } from '../platform/confirmDestructive';
 import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
 import { verbStore, useVerbState } from '../storage/verbStore';
-import { GROUP_BACK_LABELS, ROW_COUNT, pronounFor } from '../types';
+import {
+  Group,
+  GROUPS,
+  GROUP_BACK_LABELS,
+  GROUP_TAB_LABELS,
+  ROW_COUNT,
+  pronounFor,
+} from '../types';
 import { isComplete } from '../domain/verbs';
 import { checkPaper } from '../domain/dictation';
 import type { CheckedRow } from '../domain/dictation';
@@ -38,6 +44,13 @@ type Mode = 'view' | 'test' | 'write' | 'done';
 /** A flawless paper inks its six rows one after another, then stamps. */
 const SETTLE_STAGGER_MS = 90;
 const STAMP_LAG_MS = 200;
+
+/**
+ * How long the corner stays armed after the first touch on « Supprimer »: long
+ * enough to read the question and answer it, short enough that a stray touch
+ * never leaves a live delete sitting under the thumb.
+ */
+const DELETE_ARMED_MS = 3000;
 
 const blankInputs = (): string[] =>
   Array.from({ length: ROW_COUNT }, () => '');
@@ -61,7 +74,25 @@ export function VerbDetailScreen({ route, navigation }: Props) {
    * one — see ADR 0002.
    */
   const [flawless, setFlawless] = useState(false);
+  /**
+   * The corner's two pending questions: a delete waiting for its second touch,
+   * and the group the entry is being moved to. Only one is ever live at once.
+   */
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const armedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useBlurFocusedInputOnKeyboardHide();
+
+  // The armed corner must not outlive the screen: a timer still running would
+  // fire a state update on a card that is already gone.
+  useEffect(() => {
+    return () => {
+      if (armedTimer.current !== null) {
+        clearTimeout(armedTimer.current);
+        armedTimer.current = null;
+      }
+    };
+  }, []);
 
   // Every exercise is left through here: nothing typed in a dictation is kept,
   // so leaving the card and coming back starts a fresh paper. The codex keeps
@@ -74,8 +105,9 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     setFlawless(false);
   }, []);
 
-  // Android back leaves an exercise before it leaves the entry. There is no
-  // hardware key on the web, and react-native-web's stub only logs an error.
+  // Android back leaves an exercise before it leaves the entry, and drops a
+  // question the corner is still asking before that. There is no hardware key
+  // on the web, and react-native-web's stub only logs an error.
   useEffect(() => {
     if (Platform.OS === 'web') {
       return;
@@ -83,33 +115,31 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (mode === 'view') {
-          return false;
+        if (mode !== 'view') {
+          exitToView();
+          return true;
         }
-        exitToView();
-        return true;
+        if (pickerOpen || deleteArmed) {
+          setPickerOpen(false);
+          setDeleteArmed(false);
+          if (armedTimer.current !== null) {
+            clearTimeout(armedTimer.current);
+            armedTimer.current = null;
+          }
+          return true;
+        }
+        return false;
       },
     );
     return () => subscription.remove();
-  }, [mode, exitToView]);
+  }, [mode, exitToView, pickerOpen, deleteArmed]);
 
-  const confirmDelete = () => {
-    if (!verb) {
-      return;
-    }
-    confirmDestructive({
-      title: copy.deleteTitle(verb.infinitive),
-      body: copy.deleteBody,
-      confirmLabel: copy.delete,
-      cancelLabel: copy.cancel,
-      // Leaving the entry that no longer exists would show an empty screen.
-      onConfirm: () => verbStore.removeVerb(verb.id).then(navigation.goBack),
-    });
-  };
-
-  // The way back names the group this entry stands in — the list it came from.
-  // An entry that is already gone (deleted while its screen was still up) has
-  // no group left to name, so it falls back to the plain word.
+  // The way back names the group the list behind is standing in — the group it
+  // was opened from, not necessarily the one the entry stands in now: an entry
+  // can be moved while its screen is up, and the way back still goes to the
+  // list it came from. An entry that is already gone (deleted while its screen
+  // was still up) has no group left to name, so it falls back to the plain word.
+  const backGroup = route.params.group ?? verb?.group;
   const back = (
     <Pressable
       onPress={() => navigation.goBack()}
@@ -117,7 +147,9 @@ export function VerbDetailScreen({ route, navigation }: Props) {
       style={styles.backRow}
     >
       <Text style={styles.back}>
-        {copy.backTo(verb ? GROUP_BACK_LABELS[verb.group] : copy.backFallback)}
+        {copy.backTo(
+          backGroup ? GROUP_BACK_LABELS[backGroup] : copy.backFallback,
+        )}
       </Text>
     </Pressable>
   );
@@ -125,6 +157,53 @@ export function VerbDetailScreen({ route, navigation }: Props) {
   if (!verb) {
     return <Screen>{back}</Screen>;
   }
+
+  /** Stops the countdown without touching what the corner is showing. */
+  const clearArmed = () => {
+    if (armedTimer.current !== null) {
+      clearTimeout(armedTimer.current);
+      armedTimer.current = null;
+    }
+  };
+
+  /**
+   * Two touches, no dialog: the corner asks its question in place, on the paper
+   * the entry is written on, rather than in a box laid over it. The first touch
+   * arms the button, the second one does the deed, and the timer disarms a
+   * question that was never answered.
+   */
+  const pressDelete = () => {
+    if (!deleteArmed) {
+      // One question at a time in the corner.
+      setPickerOpen(false);
+      setDeleteArmed(true);
+      clearArmed();
+      armedTimer.current = setTimeout(() => {
+        armedTimer.current = null;
+        setDeleteArmed(false);
+      }, DELETE_ARMED_MS);
+      return;
+    }
+    clearArmed();
+    // Leaving the entry that no longer exists would show an empty screen.
+    verbStore.removeVerb(verb.id).then(navigation.goBack);
+  };
+
+  const togglePicker = () => {
+    // The picker and an armed delete are two questions under one thumb.
+    clearArmed();
+    setDeleteArmed(false);
+    setPickerOpen(open => !open);
+  };
+
+  // Recording a group is a rewrite of the entry and takes effect at once, with
+  // no confirmation: unlike a delete, it is undone by moving the entry back.
+  const moveTo = (group: Group) => {
+    setPickerOpen(false);
+    if (group !== verb.group) {
+      verbStore.setGroup(verb.id, group);
+    }
+  };
 
   const reveal = (index: number) => {
     setRevealed(previous => {
@@ -250,14 +329,45 @@ export function VerbDetailScreen({ route, navigation }: Props) {
       >
         <View style={styles.topRow}>
           {back}
-          <Pressable
-            onPress={confirmDelete}
-            hitSlop={10}
-            style={styles.deleteRow}
-          >
-            <Text style={styles.deleteLabel}>{copy.delete}</Text>
-          </Pressable>
+          <View style={styles.corner}>
+            <Pressable
+              onPress={togglePicker}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copy.move}
+              // The platform-neutral spelling; react-native-web reads this one
+              // and would drop an `accessibilityState` object.
+              aria-expanded={pickerOpen}
+              style={styles.cornerAction}
+            >
+              <Text
+                style={[styles.moveLabel, pickerOpen && styles.moveLabelOpen]}
+              >
+                {copy.move}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={pressDelete}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={
+                deleteArmed ? copy.deleteArmedHint : copy.delete
+              }
+              style={styles.cornerAction}
+            >
+              <Text
+                style={
+                  deleteArmed ? styles.deleteArmedLabel : styles.deleteLabel
+                }
+              >
+                {deleteArmed ? copy.deleteSure : copy.delete}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+        {pickerOpen ? (
+          <GroupPicker active={verb.group} onPick={moveTo} />
+        ) : null}
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -353,6 +463,48 @@ export function VerbDetailScreen({ route, navigation }: Props) {
   );
 }
 
+/**
+ * The three groups, hung under the corner in the library tabs' own language:
+ * the group the entry stands in is underlined in terracotta. A row rather than
+ * a dialog, so the entry being moved stays in sight while it is moved, and the
+ * move itself takes one touch instead of two.
+ */
+function GroupPicker({
+  active,
+  onPick,
+}: {
+  active: Group;
+  onPick: (group: Group) => void;
+}) {
+  return (
+    <View style={styles.picker}>
+      {GROUPS.map(group => {
+        const selected = group === active;
+        return (
+          <Pressable
+            key={group}
+            onPress={() => onPick(group)}
+            hitSlop={8}
+            accessibilityRole="button"
+            // `aria-selected` rather than `accessibilityState={{ selected }}`,
+            // for the reason MoreButton gives: both platforms read this one,
+            // and react-native-web would drop the state object.
+            aria-selected={selected}
+            style={styles.pickerTab}
+          >
+            <Text
+              style={[styles.pickerLabel, selected && styles.pickerLabelActive]}
+            >
+              {GROUP_TAB_LABELS[group]}
+            </Text>
+            {selected ? <View style={styles.pickerUnderline} /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
@@ -367,11 +519,66 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: 6,
   },
-  deleteRow: {
+  // The corner's two actions read as one cluster: the move, then the delete
+  // that has to be asked for twice.
+  corner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  cornerAction: {
     paddingVertical: 6,
+  },
+  moveLabel: {
+    ...serif(14, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),
+  },
+  // While its picker is out, the trigger reads as the thing that is on.
+  moveLabelOpen: {
+    fontFamily: fonts.serifMedium,
+    color: colors.ink,
   },
   deleteLabel: {
     ...serif(14, { fontFamily: fonts.serifItalic, color: colors.terracotta }),
+  },
+  // The question, written where the word was: upright and underlined, as if
+  // pressed into the paper — a different hand from the idle label's.
+  deleteArmedLabel: {
+    ...serif(14, {
+      fontFamily: fonts.serifMedium,
+      color: colors.terracotta,
+      textDecorationLine: 'underline',
+    }),
+  },
+  // Hung under the corner it belongs to rather than centred on the sheet: this
+  // row is the tail of the trigger above it, not a section of its own.
+  picker: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 18,
+    marginTop: -6,
+    marginBottom: 12,
+  },
+  // No horizontal padding, so the last word ends flush with « Supprimer » above
+  // it and the rule under the group on show brackets the word itself rather
+  // than the space beside it. `hitSlop` keeps each touch target generous.
+  pickerTab: {
+    paddingVertical: 4,
+  },
+  pickerLabel: {
+    ...serif(15, { color: colors.inkSecondary, fontFamily: fonts.serifItalic }),
+  },
+  pickerLabelActive: {
+    fontFamily: fonts.serifMedium,
+    color: colors.ink,
+  },
+  // The same terracotta rule the library tabs draw under the group on show.
+  pickerUnderline: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: colors.terracotta,
   },
   back: {
     ...serif(15, { fontFamily: fonts.serifItalic, color: colors.inkSecondary }),

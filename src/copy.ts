@@ -38,8 +38,13 @@ export const copy = {
   create: 'Créer',
   cancel: 'Annuler',
   delete: 'Supprimer',
-  deleteTitle: (infinitive: string) => `Supprimer « ${infinitive} » ?`,
-  deleteBody: 'Cette entrée et ses six lignes seront effacées.',
+  /**
+   * The second half of the two-tap delete: the corner asks again in place
+   * rather than opening a dialog over the entry being read.
+   */
+  deleteSure: 'Vraiment ?',
+  deleteArmedHint: 'Touchez encore pour supprimer',
+  move: 'Déplacer',
   longPressHint: 'Appui long pour réordonner',
   dragHint: 'Maintenir et glisser pour réordonner',
   // Said out loud for the completion mark, which is drawn rather than written:

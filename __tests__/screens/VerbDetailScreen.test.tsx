@@ -7,8 +7,10 @@ import { DictationRow } from '../../src/components/DictationRow';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
 import { VerdictStamp } from '../../src/components/VerdictStamp';
 import { copy } from '../../src/copy';
+import { seedVerbs } from '../../src/data/seed';
 import { VerbDetailScreen } from '../../src/screens/VerbDetailScreen';
 import { verbStore } from '../../src/storage/verbStore';
+import { Group, GROUP_BACK_LABELS, GROUP_TAB_LABELS } from '../../src/types';
 
 type ScreenProps = React.ComponentProps<typeof VerbDetailScreen>;
 
@@ -22,6 +24,8 @@ const METRICS = {
 };
 
 const mounted: ReactTestRenderer.ReactTestRenderer[] = [];
+/** The navigation mock the last `openEntry` handed the screen. */
+let lastNavigation: ScreenProps['navigation'];
 /** One of the entries the store seeds on a fresh codex. */
 const ENTRY_ID = 'seed-aimer';
 /** The six words that entry records, in row order. */
@@ -32,7 +36,7 @@ afterEach(() => {
   mounted.length = 0;
 });
 
-async function openEntry() {
+async function openEntry(params: { group?: Group } = {}) {
   // The store is the app singleton, so the codex it loads is the real one.
   await ReactTestRenderer.act(async () => {
     await verbStore.init();
@@ -42,6 +46,7 @@ async function openEntry() {
     goBack: jest.fn(),
     replace: jest.fn(),
   } as unknown as ScreenProps['navigation'];
+  lastNavigation = navigation;
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(
@@ -52,7 +57,7 @@ async function openEntry() {
             {
               key: 'VerbDetail-1',
               name: 'VerbDetail',
-              params: { verbId: ENTRY_ID },
+              params: { verbId: ENTRY_ID, ...params },
             } as ScreenProps['route']
           }
         />
@@ -108,6 +113,87 @@ async function writeAll(
   for (let index = 0; index < words.length; index++) {
     await type(tree, index, words[index]);
   }
+}
+
+/** The corner's own buttons are labelled text, not OutlinedButtons. */
+async function pressCorner(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) {
+  await ReactTestRenderer.act(async () => {
+    pressableFor(tree, label).props.onPress();
+  });
+}
+
+/**
+ * The nearest ancestor of `label` that carries `onPress`.
+ *
+ * `Pressable` is memo-wrapped, so it has no type a test can match; climbing
+ * from the visible word is stable however many wrappers React Native puts in
+ * between. The corner's two words and the picker's three groups are all just
+ * labels on a pressable, so this is how they are touched.
+ */
+function pressableFor(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+): ReactTestRenderer.ReactTestInstance {
+  const text = tree.root
+    .findAllByType(Text)
+    .find(node => node.props.children === label);
+  if (!text) {
+    throw new Error(`no label ${label} on screen`);
+  }
+  let node = text.parent;
+  while (node && typeof node.props.onPress !== 'function') {
+    node = node.parent;
+  }
+  if (!node) {
+    throw new Error(`label ${label} has no pressable above it`);
+  }
+  return node;
+}
+
+/** A group in the picker, read off the node that announces itself as selected. */
+function groupChoice(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+): ReactTestRenderer.ReactTestInstance {
+  let node: ReactTestRenderer.ReactTestInstance | null = pressableFor(
+    tree,
+    label,
+  );
+  while (node && node.props['aria-selected'] === undefined) {
+    node = node.parent;
+  }
+  if (!node) {
+    throw new Error(`group ${label} does not say whether it is selected`);
+  }
+  return node;
+}
+
+async function pickGroup(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) {
+  await ReactTestRenderer.act(async () => {
+    pressableFor(tree, label).props.onPress();
+  });
+}
+
+/** The group the store now records for an entry, if it is still there. */
+function groupOf(verbId: string): Group | undefined {
+  return verbStore.getSnapshot().verbs.find(verb => verb.id === verbId)?.group;
+}
+
+/**
+ * Deleting and moving both edit the store, which is the app singleton: the
+ * change really lands, so the codex is put back the way the rest of the file
+ * expects to find it.
+ */
+async function restoreCodex() {
+  await ReactTestRenderer.act(async () => {
+    await verbStore.replaceAll(seedVerbs());
+  });
 }
 
 describe('VerbDetailScreen', () => {
@@ -356,6 +442,156 @@ describe('VerbDetailScreen', () => {
     expect(handled).toBe(true);
     expect(tree.root.findAllByType(DictationRow)).toHaveLength(0);
     expect(tree.root.findAllByType(ConjugationRowView)).toHaveLength(6);
+    addEventListener.mockRestore();
+  });
+});
+
+/**
+ * The two questions the corner can ask — « did you mean to delete this? » and
+ * « which group is this? ». Both are answered in place, on the paper the entry
+ * is written on: no dialog is laid over the entry being read, and each takes
+ * one touch to ask and one to answer.
+ */
+describe('VerbDetailScreen: the corner', () => {
+  it('arms on the first touch and deletes on the second', async () => {
+    const tree = await openEntry();
+
+    await pressCorner(tree, copy.delete);
+
+    // The first touch only asks: the corner changes its word and nothing else.
+    expect(texts(tree)).toContain(copy.deleteSure);
+    expect(texts(tree)).not.toContain(copy.delete);
+    expect(groupOf(ENTRY_ID)).toBe(1);
+
+    await pressCorner(tree, copy.deleteSure);
+    await ReactTestRenderer.act(async () => {});
+
+    // The second one does the deed, and leaves the entry that no longer exists.
+    expect(groupOf(ENTRY_ID)).toBeUndefined();
+    expect(lastNavigation.goBack).toHaveBeenCalled();
+    await restoreCodex();
+  });
+
+  it('drops a question that was never answered', async () => {
+    const tree = await openEntry();
+    // Mounted on real timers, so only the countdown is faked.
+    jest.useFakeTimers();
+    try {
+      await pressCorner(tree, copy.delete);
+      expect(texts(tree)).toContain(copy.deleteSure);
+
+      await ReactTestRenderer.act(async () => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      // Back to the idle word, and nothing was deleted: a question the user
+      // never answered deletes nothing.
+      expect(texts(tree)).toContain(copy.delete);
+      expect(texts(tree)).not.toContain(copy.deleteSure);
+      expect(groupOf(ENTRY_ID)).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("shows the three groups in the library tabs' own words, the current one marked", async () => {
+    const tree = await openEntry();
+    expect(texts(tree)).not.toContain(GROUP_TAB_LABELS[3]);
+
+    await pressCorner(tree, copy.move);
+
+    expect(texts(tree)).toContain(GROUP_TAB_LABELS[1]);
+    expect(texts(tree)).toContain(GROUP_TAB_LABELS[2]);
+    expect(texts(tree)).toContain(GROUP_TAB_LABELS[3]);
+    expect(groupChoice(tree, GROUP_TAB_LABELS[1]).props['aria-selected']).toBe(
+      true,
+    );
+    expect(groupChoice(tree, GROUP_TAB_LABELS[2]).props['aria-selected']).toBe(
+      false,
+    );
+  });
+
+  it('moves the entry and folds the picker away', async () => {
+    const tree = await openEntry();
+    await pressCorner(tree, copy.move);
+
+    await pickGroup(tree, GROUP_TAB_LABELS[2]);
+
+    expect(groupOf(ENTRY_ID)).toBe(2);
+    expect(texts(tree)).not.toContain(GROUP_TAB_LABELS[3]);
+    await restoreCodex();
+  });
+
+  it('closes the picker without a move when the current group is touched', async () => {
+    const tree = await openEntry();
+    await pressCorner(tree, copy.move);
+
+    await pickGroup(tree, GROUP_TAB_LABELS[1]);
+
+    expect(groupOf(ENTRY_ID)).toBe(1);
+    expect(texts(tree)).not.toContain(GROUP_TAB_LABELS[3]);
+  });
+
+  it('keeps one question at a time in the corner', async () => {
+    const tree = await openEntry();
+
+    await pressCorner(tree, copy.delete);
+    expect(texts(tree)).toContain(copy.deleteSure);
+
+    // Asking about the group drops the armed delete…
+    await pressCorner(tree, copy.move);
+    expect(texts(tree)).not.toContain(copy.deleteSure);
+    expect(texts(tree)).toContain(GROUP_TAB_LABELS[1]);
+
+    // …and arming the delete again folds the picker away.
+    await pressCorner(tree, copy.delete);
+    expect(texts(tree)).not.toContain(GROUP_TAB_LABELS[1]);
+    expect(texts(tree)).toContain(copy.deleteSure);
+  });
+
+  it("names the group the list behind stands in, not the entry's own", async () => {
+    const tree = await openEntry({ group: 1 });
+    expect(texts(tree)).toContain(copy.backTo(GROUP_BACK_LABELS[1]));
+
+    await pressCorner(tree, copy.move);
+    await pickGroup(tree, GROUP_TAB_LABELS[2]);
+
+    // The entry really moved, and the way back still goes to the list this
+    // screen was opened from — the signpost did not move with the entry.
+    expect(groupOf(ENTRY_ID)).toBe(2);
+    expect(texts(tree)).toContain(copy.backTo(GROUP_BACK_LABELS[1]));
+    await restoreCodex();
+  });
+
+  it("falls back to the entry's own group when the route carries none", async () => {
+    const tree = await openEntry();
+
+    expect(texts(tree)).toContain(copy.backTo(GROUP_BACK_LABELS[1]));
+  });
+
+  it('drops its question before the Android back key leaves the entry', async () => {
+    const addEventListener = jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockReturnValue({ remove: jest.fn() } as never);
+    const tree = await openEntry();
+    await pressCorner(tree, copy.delete);
+    await pressCorner(tree, copy.move);
+    expect(texts(tree)).toContain(GROUP_TAB_LABELS[1]);
+
+    const handler = addEventListener.mock.calls[
+      addEventListener.mock.calls.length - 1
+    ][1] as () => boolean;
+    let handled = false;
+    await ReactTestRenderer.act(async () => {
+      handled = handler();
+    });
+
+    // Back meant "never mind", not "leave": the picker folded and the entry is
+    // still here.
+    expect(handled).toBe(true);
+    expect(texts(tree)).not.toContain(GROUP_TAB_LABELS[1]);
+    expect(texts(tree)).not.toContain(copy.deleteSure);
+    expect(groupOf(ENTRY_ID)).toBe(1);
     addEventListener.mockRestore();
   });
 });

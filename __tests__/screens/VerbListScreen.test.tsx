@@ -109,8 +109,11 @@ describe('VerbListScreen', () => {
       rows[0].props.onPress();
     });
 
+    // The group the list is standing in travels with the entry: the way back
+    // names it, even if the entry is moved from the detail screen.
     expect(navigation.navigate).toHaveBeenCalledWith('VerbDetail', {
       verbId: 'seed-aimer',
+      group: 1,
     });
   });
 

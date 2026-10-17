@@ -174,7 +174,7 @@ export function VerbListScreen({ navigation }: Props) {
           </Text>
         }
         onPressVerb={verb =>
-          navigation.navigate('VerbDetail', { verbId: verb.id })
+          navigation.navigate('VerbDetail', { verbId: verb.id, group })
         }
         onReorder={(verbId, toIndex) => verbStore.reorderVerb(verbId, toIndex)}
       />

@@ -3,6 +3,7 @@ import { asyncStorageAdapter } from './asyncStorageAdapter';
 import { ConjugationRow, Group, Verb } from '../types';
 import {
   createVerb,
+  moveToGroup,
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
@@ -36,6 +37,7 @@ export type VerbStore = {
   setRow(verbId: string, index: number, patch: Partial<ConjugationRow>): void;
   setInfinitive(verbId: string, infinitive: string): void;
   setNote(verbId: string, note: string): void;
+  setGroup(verbId: string, group: Group): Promise<void>;
   reorderVerb(verbId: string, toIndex: number): Promise<void>;
   removeVerb(verbId: string): Promise<void>;
   replaceAll(verbs: Verb[]): Promise<void>;
@@ -202,6 +204,20 @@ export function createVerbStore(
     schedulePersist();
   }
 
+  // Structural like a reorder, and written at once for the same reason: the
+  // entry changes hands between two lists, and a crash mid-debounce would put
+  // it back in the group the user just took it out of.
+  async function setGroup(verbId: string, group: Group): Promise<void> {
+    const next = moveToGroup(verbs, verbId, group, now());
+    if (next === verbs) {
+      return;
+    }
+    verbs = next;
+    revision++;
+    publish();
+    await writeNow();
+  }
+
   // Not debounced like typing: reordering is structural, and the entry
   // objects themselves are only moved, never rewritten, so updatedAt stays
   // a record of content changes.
@@ -253,6 +269,7 @@ export function createVerbStore(
     setRow,
     setInfinitive,
     setNote,
+    setGroup,
     reorderVerb,
     removeVerb,
     replaceAll,

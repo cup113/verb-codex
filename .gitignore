@@ -86,6 +86,12 @@ yarn-error.log
 # Playwright MCP writes its page snapshots and console logs here.
 .playwright-mcp/
 
+# Screenshots are working notes rather than sources: taken while reviewing a
+# change, read where they are, not committed. The shots the docs cite by name
+# are already in the history and stay there; a new one a document must point at
+# takes an explicit `git add -f`.
+screenshots/
+
 # `tools/make-fonts.py` caches the 24 MB CJK variable font it instances from.
 .fonts-src/
 

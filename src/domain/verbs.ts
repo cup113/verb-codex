@@ -68,6 +68,45 @@ export function withNote(verb: Verb, note: string, now: number): Verb {
   return { ...verb, note, updatedAt: now };
 }
 
+/** The group is recorded text too, so a change of it is a change of content. */
+export function withGroup(verb: Verb, group: Group, now: number): Verb {
+  return { ...verb, group, updatedAt: now };
+}
+
+/**
+ * Move one entry into another group.
+ *
+ * The entry lands at the end of its new group's order — the same slot a newly
+ * recorded entry takes — because the position it held among the old group's
+ * neighbours says nothing about where it belongs among these. The array keeps
+ * being the single source of truth for order, per group; the entry's own
+ * `updatedAt` moves with it, unlike a drag, which only moves objects about.
+ */
+export function moveToGroup(
+  verbs: Verb[],
+  id: string,
+  group: Group,
+  now: number,
+): Verb[] {
+  const moving = verbs.find(verb => verb.id === id);
+  if (!moving || moving.group === group) {
+    return verbs;
+  }
+  const without = verbs.filter(verb => verb.id !== id);
+  let last = -1;
+  without.forEach((verb, index) => {
+    if (verb.group === group) {
+      last = index;
+    }
+  });
+  const at = last === -1 ? without.length : last + 1;
+  return [
+    ...without.slice(0, at),
+    withGroup(moving, group, now),
+    ...without.slice(at),
+  ];
+}
+
 /**
  * Move one entry to a new position among the entries of its own group.
  *

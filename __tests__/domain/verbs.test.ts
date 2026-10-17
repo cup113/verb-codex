@@ -4,9 +4,11 @@ import {
   filledCount,
   insertionIndex,
   isComplete,
+  moveToGroup,
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
+  withGroup,
   withInfinitive,
   withNote,
   withRow,
@@ -76,6 +78,97 @@ describe('reorderWithinGroup', () => {
     expect(moved[0]).toBe(parler);
     expect(moved[1]).toBe(aimer);
     expect(moved[1].updatedAt).toBe(aimer.updatedAt);
+  });
+});
+
+describe('moveToGroup', () => {
+  const aimer = createVerb({
+    id: 'a',
+    infinitive: 'aimer',
+    group: 1,
+    now: NOW,
+  });
+  const parler = createVerb({
+    id: 'b',
+    infinitive: 'parler',
+    group: 1,
+    now: NOW,
+  });
+  const finir = createVerb({
+    id: 'z',
+    infinitive: 'finir',
+    group: 2,
+    now: NOW,
+  });
+  const choisir = createVerb({
+    id: 'y',
+    infinitive: 'choisir',
+    group: 2,
+    now: NOW,
+  });
+  const aller = createVerb({
+    id: 'c',
+    infinitive: 'aller',
+    group: 3,
+    now: NOW,
+  });
+
+  const ids = (verbs: ReturnType<typeof moveToGroup>) =>
+    verbs.map(verb => verb.id);
+
+  it('lands the entry at the end of its new group', () => {
+    expect(
+      ids(moveToGroup([aimer, parler, finir, choisir], 'a', 2, NOW + 1)),
+    ).toEqual(['b', 'z', 'y', 'a']);
+  });
+
+  it('leaves the order of every other group alone', () => {
+    // `parler` leaves group 1 for group 3; group 1 keeps one member, group 2
+    // keeps its own two in the order they were recorded in.
+    expect(
+      ids(moveToGroup([aimer, finir, parler, choisir, aller], 'b', 3, NOW + 1)),
+    ).toEqual(['a', 'z', 'y', 'c', 'b']);
+  });
+
+  it('appends at the end of the array when the new group is empty', () => {
+    expect(ids(moveToGroup([aimer, finir], 'a', 3, NOW + 1))).toEqual([
+      'z',
+      'a',
+    ]);
+  });
+
+  it('returns the very same array when there is nothing to move', () => {
+    const verbs = [aimer, parler];
+    expect(moveToGroup(verbs, 'a', 1, NOW + 1)).toBe(verbs);
+    expect(moveToGroup(verbs, 'nope', 2, NOW + 1)).toBe(verbs);
+  });
+
+  it('rewrites the entry it moves, unlike a drag that only moves it about', () => {
+    const moved = moveToGroup([aimer, finir], 'a', 2, NOW + 7);
+
+    expect(moved[1].group).toBe(2);
+    expect(moved[1].updatedAt).toBe(NOW + 7);
+    // Only the group changed; the recording itself is untouched.
+    expect(moved[1].infinitive).toBe('aimer');
+    expect(moved[1].createdAt).toBe(aimer.createdAt);
+    // Immutable: the entry left behind still stands in its old group.
+    expect(aimer.group).toBe(1);
+  });
+});
+
+describe('withGroup', () => {
+  it('replaces the group, stamps the update, and leaves the original alone', () => {
+    const verb = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
+    const moved = withGroup(verb, 3, NOW + 5);
+
+    expect(moved.group).toBe(3);
+    expect(moved.updatedAt).toBe(NOW + 5);
+    expect(verb.group).toBe(1);
   });
 });
 
@@ -236,7 +329,12 @@ describe('filledCount', () => {
 
 describe('isComplete', () => {
   it('is true only once every one of the six rows is written', () => {
-    const empty = createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW });
+    const empty = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
     expect(isComplete(empty)).toBe(false);
 
     const five = [0, 1, 2, 3, 4].reduce(
@@ -250,7 +348,12 @@ describe('isComplete', () => {
   });
 
   it('does not count a row holding only whitespace', () => {
-    const empty = createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW });
+    const empty = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
     const fiveAndABlank = [0, 1, 2, 3, 4].reduce(
       (verb, index) => withRow(verb, index, { form: 'aime' }, NOW + index),
       empty,

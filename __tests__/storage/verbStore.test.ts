@@ -184,6 +184,38 @@ describe('createVerbStore', () => {
     expect(persisted(entries)).toEqual([]);
   });
 
+  it('moves an entry to another group and writes the move at once', async () => {
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    writes.length = 0;
+
+    await store.setGroup(verb.id, 3);
+
+    expect(store.getSnapshot().verbs[0].group).toBe(3);
+    // Structural like a delete or a drag: it does not wait out the debounce.
+    expect(writes).toEqual([VERBS_KEY]);
+    expect(persisted(entries)[0].group).toBe(3);
+  });
+
+  it('does not write when an entry is asked for the group it already has', async () => {
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    writes.length = 0;
+
+    await store.setGroup(verb.id, 1);
+
+    expect(writes).toEqual([]);
+    expect(persisted(entries)[0].group).toBe(1);
+  });
+
   it('persists a rename of the infinitive', async () => {
     const { storage, entries } = memoryStorage({ [SEEDED_KEY]: 'true' });
     const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });

@@ -35,7 +35,12 @@ export function AddVerbScreen({ navigation, route }: Props) {
       return;
     }
     verbStore.addVerb({ infinitive, group }).then(verb => {
-      navigation.replace('VerbDetail', { verbId: verb.id });
+      // The way back names the group the list is standing in, which is the one
+      // this screen was opened from — not necessarily the one just chosen.
+      navigation.replace('VerbDetail', {
+        verbId: verb.id,
+        group: route.params.group,
+      });
     });
   };
 
