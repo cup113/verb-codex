@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Le Genre — démo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- The faces the codex wears: Newsreader for the notebook, JetBrains Mono
+       for the numbers, Noto Serif SC for the Chinese gloss. -->
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-paper: #F6F2EB;
+      --bg-card: #FAF8F5;
+      --ink-primary: #2A2421;
+      --ink-secondary: #8E8278;
+      --accent-terracotta: #B95D38;
+      --line-subtle: #E6DFD5;
+      --font-serif: 'Newsreader', 'Noto Serif SC', Garamond, Georgia, serif;
+      --font-mono: 'JetBrains Mono', Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #EAE5DC;
+      color: var(--ink-primary);
+      font-family: var(--font-serif);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 414px;
+      background-color: var(--bg-paper);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(42, 36, 33, 0.08);
+      padding: 28px 24px;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    button {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--accent-terracotta);
+      outline-offset: 2px;
+    }
+
+    /* ---- Accueil : the corner the entry lives in ---- */
+
+    .home-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .greet {
+      font-size: 26px;
+      letter-spacing: -0.02em;
+      display: flex;
+      gap: 7px;
+      align-items: baseline;
+    }
+
+    .salut {
+      font-style: italic;
+      color: var(--ink-secondary);
+    }
+
+    .who {
+      font-style: italic;
+    }
+
+    .corner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .counter {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-secondary);
+    }
+
+    .dots {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      padding: 6px 2px;
+    }
+
+    .dots span {
+      width: 3.5px;
+      height: 3.5px;
+      border-radius: 50%;
+      background: var(--ink-secondary);
+      opacity: 0.75;
+    }
+
+    .menu-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+    }
+
+    .menu-backdrop {
+      position: absolute;
+      inset: 0;
+      border: none;
+      background: transparent;
+      cursor: default;
+    }
+
+    .menu-card {
+      position: absolute;
+      right: 24px;
+      top: 58px;
+      min-width: 152px;
+      background: var(--bg-card);
+      border: 1px solid rgba(230, 223, 213, 0.9);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(42, 36, 33, 0.12);
+      padding: 4px 0;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      font-family: var(--font-serif);
+      font-size: 15px;
+      padding: 11px 16px;
+      cursor: pointer;
+    }
+
+    .menu-item:hover {
+      background: rgba(42, 36, 33, 0.04);
+    }
+
+    .ghost-line {
+      margin-top: 26px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--ink-secondary);
+      opacity: 0.45;
+    }
+
+    /* ---- Shared chrome ---- */
+
+    .bar {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .back {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 15px;
+      font-style: italic;
+      color: var(--ink-secondary);
+      cursor: pointer;
+    }
+
+    .back:hover {
+      color: var(--ink-primary);
+    }
+
+    .bar-title {
+      font-size: 16px;
+    }
+
+    /* ---- Lobby ---- */
+
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      margin-top: 8px;
+    }
+
+    .lede {
+      font-style: italic;
+      color: var(--ink-secondary);
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .big {
+      font-size: 17px;
+      padding: 14px 18px;
+      border: 1px solid var(--ink-primary);
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .big:hover:not(:disabled) {
+      background: var(--ink-primary);
+      color: var(--bg-paper);
+    }
+
+    .big:disabled {
+      opacity: 0.35;
+      cursor: default;
+      border-color: var(--ink-secondary);
+    }
+
+    .big.ghost {
+      border-color: var(--ink-secondary);
+    }
+
+    .muted {
+      font-size: 12px;
+      font-style: italic;
+      color: var(--ink-secondary);
+      margin-top: 6px;
+    }
+
+    .foot {
+      margin-top: auto;
+      padding-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--ink-secondary);
+    }
+
+    .link {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 12px;
+      font-style: italic;
+      text-decoration: underline;
+      color: var(--ink-secondary);
+      cursor: pointer;
+      align-self: flex-start;
+    }
+
+    .link:hover {
+      color: var(--ink-primary);
+    }
+
+    .warn {
+      color: var(--accent-terracotta);
+      font-style: italic;
+    }
+
+    /* ---- The question card ---- */
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid rgba(230, 223, 213, 0.6);
+      border-radius: 8px;
+      padding: 28px 20px 24px;
+      box-shadow: 0 2px 8px rgba(42, 36, 33, 0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card-top {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+
+    .kind {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+    }
+
+    .box-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-terracotta);
+      border: 1px solid currentColor;
+      border-radius: 10px;
+      padding: 1px 8px;
+    }
+
+    .noun {
+      font-size: 40px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      margin: 8px 0 6px;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    /* The one line of Chinese: it sits next to the French while the answer is
+       still open, because recognising the word is half the question. */
+    .gloss {
+      margin: 0 0 26px;
+      font-size: 16px;
+      color: var(--ink-secondary);
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .picks {
+      display: flex;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .pick {
+      flex: 1;
+      font-size: 26px;
+      padding: 16px 0;
+      border: 1px solid var(--ink-secondary);
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .pick:hover:not(:disabled) {
+      border-color: var(--ink-primary);
+    }
+
+    .pick:disabled {
+      cursor: default;
+    }
+
+    .pick.right {
+      border-color: var(--accent-terracotta);
+      color: var(--accent-terracotta);
+    }
+
+    .pick.wrong {
+      color: var(--ink-secondary);
+      text-decoration: line-through;
+      text-decoration-thickness: 1.5px;
+    }
+
+    .feedback {
+      margin-top: 22px;
+      min-height: 58px;
+      text-align: center;
+    }
+
+    .feedback.quiet {
+      font-style: italic;
+      color: var(--ink-secondary);
+      font-size: 13px;
+    }
+
+    .answer {
+      font-size: 20px;
+    }
+
+    .answer .art {
+      color: var(--accent-terracotta);
+      font-style: italic;
+    }
+
+    .outcome {
+      margin-top: 5px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-terracotta);
+    }
+
+    .foot-bar {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 18px;
+    }
+
+    .primary {
+      font-size: 16px;
+      padding: 10px 22px;
+      border: 1px solid var(--ink-primary);
+      border-radius: 4px;
+      background: var(--ink-primary);
+      color: var(--bg-paper);
+      cursor: pointer;
+    }
+
+    /* ---- End of session ---- */
+
+    .summary {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .score {
+      font-family: var(--font-mono);
+      font-size: 40px;
+      letter-spacing: 0.02em;
+    }
+
+    .stamp {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      color: var(--accent-terracotta);
+      border: 3px double var(--accent-terracotta);
+      padding: 4px 12px;
+      border-radius: 2px;
+      transform: rotate(-3deg);
+    }
+
+    .misses {
+      list-style: none;
+      width: 100%;
+      border-top: 1px dashed var(--line-subtle);
+      margin-top: 4px;
+    }
+
+    .misses li {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 2px;
+      border-bottom: 1px dashed var(--line-subtle);
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+
+    .misses .g {
+      color: var(--accent-terracotta);
+    }
+
+    .summary .big {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div id="app"></div>
+  </div>
+
+  <script>
+    // The bank: frequency-ordered top-1000 of Lexique 4.1's le/la nouns.
+    // Generated by tools/make-nouns.py — regenerate it rather than hand-edit.
+    const NOUNS = [{"w":"temps","g":"m","f":1123.65,"zh":"时间；天气"},{"w":"besoin","g":"m","f":1070.97,"zh":"需要"},{"w":"père","g":"m","f":1030.82,"zh":"父亲"},{"w":"vie","g":"f","f":1015.44,"zh":"生活；生命"},{"w":"fois","g":"f","f":946.58,"zh":"次"},{"w":"jour","g":"m","f":920.94,"zh":"天；日子"},{"w":"monde","g":"m","f":873.52,"zh":"世界"},{"w":"peu","g":"m","f":850.66,"zh":"少量"},{"w":"dieu","g":"m","f":800.42,"zh":"神；上帝"},{"w":"déesse","g":"f","f":800.42,"zh":"女神"},{"w":"maman","g":"f","f":698.62,"zh":"妈妈"},{"w":"papa","g":"m","f":698.62,"zh":"爸爸"},{"w":"femme","g":"f","f":645.81,"zh":"女人；妻子"},{"w":"monsieur","g":"m","f":639.25,"zh":"先生"},{"w":"maison","g":"f","f":602.93,"zh":"房子；家"},{"w":"problème","g":"m","f":580.38,"zh":"问题"},{"w":"fille","g":"f","f":566.99,"zh":"女孩；女儿"},{"w":"soir","g":"m","f":559.3,"zh":"晚上"},{"w":"nom","g":"m","f":550.14,"zh":"名字"},{"w":"fait","g":"m","f":535.14,"zh":"事实"},{"w":"raison","g":"f","f":527.25,"zh":"理由；道理"},{"w":"nuit","g":"f","f":524.06,"zh":"夜晚"},{"w":"moment","g":"m","f":520.39,"zh":"时刻"},{"w":"fils","g":"m","f":514.95,"zh":"儿子"},{"w":"truc","g":"m","f":493.0,"zh":"东西"},{"w":"bonjour","g":"m","f":483.79,"zh":"你好"},{"w":"garce","g":"f","f":461.19,"zh":"坏女人"},{"w":"gars","g":"m","f":461.19,"zh":"小伙子"},{"w":"famille","g":"f","f":442.44,"zh":"家庭"},{"w":"main","g":"f","f":440.77,"zh":"手"},{"w":"personne","g":"f","f":440.33,"zh":"人"},{"w":"mec","g":"m","f":440.3,"zh":"男人；家伙"},{"w":"peur","g":"f","f":436.76,"zh":"害怕"},{"w":"question","g":"f","f":436.19,"zh":"问题"},{"w":"garçon","g":"m","f":431.81,"zh":"男孩"},{"w":"garçonne","g":"f","f":431.81,"zh":"假小子"},{"w":"travail","g":"m","f":427.27,"zh":"工作"},{"w":"voiture","g":"f","f":422.92,"zh":"汽车"},{"w":"tête","g":"f","f":422.15,"zh":"头"},{"w":"coup","g":"m","f":408.58,"zh":"打击；一下"},{"w":"mère","g":"f","f":408.3,"zh":"母亲"},{"w":"frère","g":"m","f":405.77,"zh":"兄弟"},{"w":"chance","g":"f","f":405.18,"zh":"运气"},{"w":"minute","g":"f","f":404.25,"zh":"分钟"},{"w":"semaine","g":"f","f":333.44,"zh":"星期"},{"w":"cas","g":"m","f":323.53,"zh":"情况"},{"w":"sang","g":"m","f":322.0,"zh":"血"},{"w":"mari","g":"m","f":309.77,"zh":"丈夫"},{"w":"porte","g":"f","f":307.38,"zh":"门"},{"w":"genre","g":"m","f":306.61,"zh":"种类；类型"},{"w":"bébé","g":"m","f":302.25,"zh":"婴儿"},{"w":"mois","g":"m","f":296.27,"zh":"月"},{"w":"ville","g":"f","f":296.15,"zh":"城市"},{"w":"type","g":"m","f":295.74,"zh":"类型"},{"w":"police","g":"f","f":295.06,"zh":"警察"},{"w":"putain","g":"f","f":291.79,"zh":"婊子；他妈的"},{"w":"tout","g":"m","f":291.44,"zh":"全部"},{"w":"côté","g":"m","f":287.64,"zh":"边；方面"},{"w":"cœur","g":"m","f":284.82,"zh":"心；心脏"},{"w":"mal","g":"m","f":281.37,"zh":"疼痛"},{"w":"façon","g":"f","f":279.06,"zh":"方式"},{"w":"point","g":"m","f":277.6,"zh":"点"},{"w":"salut","g":"m","f":275.6,"zh":"你好"},{"w":"place","g":"f","f":275.27,"zh":"位置；广场"},{"w":"train","g":"m","f":271.57,"zh":"火车"},{"w":"mot","g":"m","f":259.35,"zh":"词"},{"w":"corps","g":"m","f":258.58,"zh":"身体"},{"w":"madame","g":"f","f":254.95,"zh":"女士；夫人"},{"w":"matin","g":"m","f":253.44,"zh":"早晨"},{"w":"chambre","g":"f","f":251.3,"zh":"卧室；房间"},{"w":"partie","g":"f","f":249.24,"zh":"部分"},{"w":"terre","g":"f","f":247.16,"zh":"土地；地球"},{"w":"suite","g":"f","f":237.64,"zh":"后续"},{"w":"photo","g":"f","f":230.09,"zh":"照片"},{"w":"docteur","g":"m","f":226.27,"zh":"医生"},{"w":"cause","g":"f","f":224.0,"zh":"原因"},{"w":"chef","g":"m","f":220.12,"zh":"首领；老板"},{"w":"bureau","g":"m","f":219.18,"zh":"办公室"},{"w":"propos","g":"m","f":218.47,"zh":"话语"},{"w":"boulot","g":"m","f":217.03,"zh":"工作"},{"w":"jeu","g":"m","f":215.65,"zh":"游戏"},{"w":"confiance","g":"f","f":209.07,"zh":"信任"},{"w":"vérité","g":"f","f":208.86,"zh":"真相"},{"w":"journée","g":"f","f":207.38,"zh":"一天"},{"w":"reste","g":"m","f":206.73,"zh":"剩余"},{"w":"téléphone","g":"m","f":204.73,"zh":"电话"},{"w":"nouveau","g":"m","f":203.29,"zh":"新来者"},{"w":"film","g":"m","f":199.45,"zh":"电影"},{"w":"feu","g":"m","f":197.61,"zh":"火"},{"w":"plan","g":"m","f":194.78,"zh":"计划"},{"w":"droit","g":"m","f":191.85,"zh":"权利"},{"w":"mariage","g":"m","f":191.75,"zh":"婚姻；婚礼"},{"w":"chien","g":"m","f":189.12,"zh":"狗"},{"w":"sécurité","g":"f","f":188.81,"zh":"安全"},{"w":"parent","g":"m","f":187.93,"zh":"父母"},{"w":"fête","g":"f","f":187.15,"zh":"节日"},{"w":"numéro","g":"m","f":184.2,"zh":"号码"},{"w":"service","g":"m","f":182.52,"zh":"服务"},{"w":"guerre","g":"f","f":179.96,"zh":"战争"},{"w":"merde","g":"f","f":176.03,"zh":"屎；他妈的"},{"w":"pied","g":"m","f":175.9,"zh":"脚"},{"w":"lieu","g":"m","f":175.82,"zh":"地点"},{"w":"pays","g":"m","f":171.29,"zh":"国家"},{"w":"retour","g":"m","f":171.06,"zh":"返回"},{"w":"prison","g":"f","f":168.23,"zh":"监狱"},{"w":"peine","g":"f","f":165.93,"zh":"痛苦"},{"w":"carte","g":"f","f":164.43,"zh":"卡片；地图"},{"w":"chéri","g":"m","f":163.89,"zh":"亲爱的"},{"w":"meurtre","g":"m","f":161.61,"zh":"谋杀"},{"w":"route","g":"f","f":160.23,"zh":"道路"},{"w":"compte","g":"m","f":159.34,"zh":"账户"},{"w":"pièce","g":"f","f":159.3,"zh":"房间；硬币"},{"w":"faute","g":"f","f":159.03,"zh":"错误"},{"w":"choix","g":"m","f":158.6,"zh":"选择"},{"w":"dollar","g":"m","f":156.82,"zh":"美元"},{"w":"flic","g":"m","f":155.97,"zh":"警察"},{"w":"sujet","g":"m","f":155.15,"zh":"主题"},{"w":"verre","g":"m","f":155.11,"zh":"玻璃；杯子"},{"w":"seconde","g":"f","f":155.07,"zh":"秒"},{"w":"plaisir","g":"m","f":155.03,"zh":"乐趣"},{"w":"victime","g":"f","f":148.93,"zh":"受害者"},{"w":"rapport","g":"m","f":148.78,"zh":"报告"},{"w":"rêve","g":"m","f":146.78,"zh":"梦"},{"w":"lit","g":"m","f":146.36,"zh":"床"},{"w":"preuve","g":"f","f":146.17,"zh":"证据"},{"w":"message","g":"m","f":145.84,"zh":"消息"},{"w":"roi","g":"m","f":145.3,"zh":"国王"},{"w":"sorte","g":"f","f":144.45,"zh":"种类"},{"w":"million","g":"m","f":142.96,"zh":"百万"},{"w":"client","g":"m","f":142.19,"zh":"顾客"},{"w":"visage","g":"m","f":139.37,"zh":"面孔"},{"w":"chemin","g":"m","f":139.14,"zh":"小路"},{"w":"salle","g":"f","f":137.71,"zh":"大厅"},{"w":"président","g":"m","f":137.23,"zh":"总统"},{"w":"musique","g":"f","f":133.38,"zh":"音乐"},{"w":"rue","g":"f","f":133.19,"zh":"街道"},{"w":"copain","g":"m","f":133.05,"zh":"朋友；男友"},{"w":"copine","g":"f","f":133.05,"zh":"朋友；女友"},{"w":"force","g":"f","f":133.02,"zh":"力量"},{"w":"cul","g":"m","f":131.93,"zh":"屁股"},{"w":"balle","g":"f","f":131.9,"zh":"子弹；球"},{"w":"seigneur","g":"m","f":131.84,"zh":"领主"},{"w":"sac","g":"m","f":131.71,"zh":"包"},{"w":"soirée","g":"f","f":131.35,"zh":"夜晚"},{"w":"café","g":"m","f":129.28,"zh":"咖啡"},{"w":"groupe","g":"m","f":128.82,"zh":"团体"},{"w":"sens","g":"m","f":128.65,"zh":"意义；方向"},{"w":"face","g":"f","f":126.71,"zh":"脸"},{"w":"pouvoir","g":"m","f":124.71,"zh":"权力"},{"w":"bras","g":"m","f":124.03,"zh":"手臂"},{"w":"crime","g":"m","f":123.9,"zh":"罪行"},{"w":"retard","g":"m","f":123.89,"zh":"迟到"},{"w":"lettre","g":"f","f":123.19,"zh":"信；字母"},{"w":"patron","g":"m","f":121.63,"zh":"老板"},{"w":"courant","g":"m","f":120.99,"zh":"电流"},{"w":"réponse","g":"f","f":118.79,"zh":"回答"},{"w":"clé","g":"f","f":118.05,"zh":"钥匙"},{"w":"pas","g":"m","f":116.85,"zh":"步"},{"w":"cadeau","g":"m","f":116.31,"zh":"礼物"},{"w":"début","g":"m","f":116.13,"zh":"开始"},{"w":"médecin","g":"m","f":116.01,"zh":"医生"},{"w":"dos","g":"m","f":114.19,"zh":"背"},{"w":"maître","g":"m","f":113.32,"zh":"主人"},{"w":"cheveu","g":"m","f":112.56,"zh":"头发"},{"w":"relation","g":"f","f":112.53,"zh":"关系"},{"w":"dossier","g":"m","f":110.58,"zh":"档案"},{"w":"scène","g":"f","f":110.45,"zh":"舞台"},{"w":"ligne","g":"f","f":110.22,"zh":"线"},{"w":"situation","g":"f","f":109.82,"zh":"情况"},{"w":"système","g":"m","f":109.79,"zh":"系统"},{"w":"recherche","g":"f","f":109.79,"zh":"研究"},{"w":"voix","g":"f","f":109.5,"zh":"声音"},{"w":"moyen","g":"m","f":109.15,"zh":"方法"},{"w":"prix","g":"m","f":108.78,"zh":"价格"},{"w":"bateau","g":"m","f":108.65,"zh":"船"},{"w":"bonsoir","g":"m","f":108.44,"zh":"晚上好"},{"w":"secret","g":"m","f":108.29,"zh":"秘密"},{"w":"bout","g":"m","f":107.81,"zh":"尽头"},{"w":"lumière","g":"f","f":107.71,"zh":"光；灯光"},{"w":"conseil","g":"m","f":105.99,"zh":"建议"},{"w":"voyage","g":"m","f":105.71,"zh":"旅行"},{"w":"loi","g":"f","f":105.08,"zh":"法律"},{"w":"rendez-vous","g":"m","f":104.14,"zh":"约会"},{"w":"liste","g":"f","f":104.13,"zh":"清单"},{"w":"cheval","g":"m","f":103.61,"zh":"马"},{"w":"tueur","g":"m","f":101.84,"zh":"杀手"},{"w":"table","g":"f","f":101.27,"zh":"桌子"},{"w":"doute","g":"m","f":100.87,"zh":"怀疑"},{"w":"gamin","g":"m","f":99.77,"zh":"小孩"},{"w":"salaud","g":"m","f":99.43,"zh":"混蛋"},{"w":"bordel","g":"m","f":98.12,"zh":"混乱"},{"w":"chanson","g":"f","f":98.02,"zh":"歌曲"},{"w":"règle","g":"f","f":97.2,"zh":"规则"},{"w":"témoin","g":"m","f":96.98,"zh":"证人"},{"w":"vieux","g":"m","f":96.92,"zh":"老人"},{"w":"journal","g":"m","f":96.81,"zh":"报纸"},{"w":"mission","g":"f","f":96.33,"zh":"任务"},{"w":"colère","g":"f","f":95.1,"zh":"愤怒"},{"w":"décision","g":"f","f":94.45,"zh":"决定"},{"w":"soin","g":"m","f":94.16,"zh":"照顾"},{"w":"paix","g":"f","f":94.08,"zh":"和平"},{"w":"faim","g":"f","f":93.34,"zh":"饥饿"},{"w":"papier","g":"m","f":93.23,"zh":"纸"},{"w":"manière","g":"f","f":93.18,"zh":"方式"},{"w":"bien","g":"m","f":93.05,"zh":"好处"},{"w":"coin","g":"m","f":92.95,"zh":"角落"},{"w":"bois","g":"m","f":92.87,"zh":"木头；树林"},{"w":"camp","g":"m","f":92.67,"zh":"营地"},{"w":"club","g":"m","f":91.84,"zh":"俱乐部"},{"w":"vol","g":"m","f":91.31,"zh":"飞行；盗窃"},{"w":"boîte","g":"f","f":91.3,"zh":"盒子"},{"w":"professeur","g":"m","f":90.95,"zh":"老师"},{"w":"jambe","g":"f","f":90.76,"zh":"腿"},{"w":"fond","g":"m","f":90.24,"zh":"底部"},{"w":"vaisseau","g":"m","f":90.14,"zh":"船；血管"},{"w":"soldat","g":"m","f":89.8,"zh":"士兵"},{"w":"patient","g":"m","f":88.6,"zh":"病人"},{"w":"cerveau","g":"m","f":88.14,"zh":"大脑"},{"w":"vue","g":"f","f":87.5,"zh":"视力；景色"},{"w":"cour","g":"f","f":87.36,"zh":"院子"},{"w":"marché","g":"m","f":86.83,"zh":"市场"},{"w":"visite","g":"f","f":86.39,"zh":"拜访"},{"w":"ciel","g":"m","f":85.97,"zh":"天空"},{"w":"sentiment","g":"m","f":85.75,"zh":"感情"},{"w":"drogue","g":"f","f":85.64,"zh":"毒品"},{"w":"mur","g":"m","f":85.42,"zh":"墙"},{"w":"trou","g":"m","f":85.39,"zh":"洞"},{"w":"forme","g":"f","f":85.37,"zh":"形状；状态"},{"w":"général","g":"m","f":85.16,"zh":"将军"},{"w":"contrôle","g":"m","f":84.7,"zh":"检查；控制"},{"w":"danger","g":"m","f":84.57,"zh":"危险"},{"w":"bar","g":"m","f":84.43,"zh":"酒吧"},{"w":"dame","g":"f","f":84.17,"zh":"女士"},{"w":"dîner","g":"m","f":84.13,"zh":"晚餐"},{"w":"blague","g":"f","f":82.57,"zh":"笑话"},{"w":"parole","g":"f","f":82.05,"zh":"话语"},{"w":"compagnie","g":"f","f":81.63,"zh":"公司"},{"w":"classe","g":"f","f":81.42,"zh":"班级"},{"w":"test","g":"m","f":81.4,"zh":"测试"},{"w":"bord","g":"m","f":81.34,"zh":"边缘"},{"w":"contact","g":"m","f":81.01,"zh":"接触；联系"},{"w":"but","g":"m","f":80.62,"zh":"目标"},{"w":"réunion","g":"f","f":80.54,"zh":"会议"},{"w":"ferme","g":"f","f":80.41,"zh":"农场"},{"w":"signe","g":"m","f":80.41,"zh":"标志"},{"w":"travers","g":"m","f":80.09,"zh":"缺点"},{"w":"projet","g":"m","f":79.96,"zh":"计划"},{"w":"soleil","g":"m","f":79.73,"zh":"太阳"},{"w":"chat","g":"m","f":79.5,"zh":"猫"},{"w":"pute","g":"f","f":79.15,"zh":"妓女"},{"w":"moitié","g":"f","f":79.04,"zh":"一半"},{"w":"mer","g":"f","f":79.03,"zh":"海"},{"w":"gueule","g":"f","f":78.94,"zh":"嘴"},{"w":"surprise","g":"f","f":78.47,"zh":"惊喜"},{"w":"bière","g":"f","f":77.78,"zh":"啤酒"},{"w":"doigt","g":"m","f":77.74,"zh":"手指"},{"w":"télé","g":"f","f":77.5,"zh":"电视"},{"w":"santé","g":"f","f":77.38,"zh":"健康"},{"w":"combat","g":"m","f":76.56,"zh":"战斗"},{"w":"course","g":"f","f":76.49,"zh":"跑步；比赛"},{"w":"bruit","g":"m","f":76.1,"zh":"噪音"},{"w":"risque","g":"m","f":76.06,"zh":"风险"},{"w":"membre","g":"m","f":76.05,"zh":"成员"},{"w":"passé","g":"m","f":75.69,"zh":"过去"},{"w":"lieutenant","g":"m","f":75.23,"zh":"中尉"},{"w":"base","g":"f","f":75.22,"zh":"基础"},{"w":"bombe","g":"f","f":75.05,"zh":"炸弹"},{"w":"prince","g":"m","f":74.49,"zh":"王子"},{"w":"connerie","g":"f","f":73.78,"zh":"蠢事"},{"w":"caméra","g":"f","f":73.67,"zh":"摄像机"},{"w":"milieu","g":"m","f":73.5,"zh":"中间"},{"w":"cuisine","g":"f","f":73.25,"zh":"厨房"},{"w":"fenêtre","g":"f","f":73.08,"zh":"窗户"},{"w":"bouche","g":"f","f":73.04,"zh":"嘴"},{"w":"société","g":"f","f":72.56,"zh":"社会"},{"w":"con","g":"m","f":71.24,"zh":"傻瓜"},{"w":"gouvernement","g":"m","f":71.15,"zh":"政府"},{"w":"fleur","g":"f","f":70.95,"zh":"花"},{"w":"niveau","g":"m","f":70.68,"zh":"水平"},{"w":"diable","g":"m","f":70.52,"zh":"魔鬼"},{"w":"position","g":"f","f":70.51,"zh":"位置"},{"w":"machine","g":"f","f":70.41,"zh":"机器"},{"w":"bain","g":"m","f":69.74,"zh":"洗澡"},{"w":"peuple","g":"m","f":69.74,"zh":"人民"},{"w":"calme","g":"m","f":69.52,"zh":"平静"},{"w":"peau","g":"f","f":69.19,"zh":"皮肤"},{"w":"magasin","g":"m","f":69.11,"zh":"商店"},{"w":"toilette","g":"f","f":69.08,"zh":"厕所"},{"w":"quartier","g":"m","f":69.07,"zh":"街区"},{"w":"silence","g":"m","f":68.98,"zh":"寂静"},{"w":"tort","g":"m","f":68.46,"zh":"过错"},{"w":"vin","g":"m","f":68.44,"zh":"葡萄酒"},{"w":"dessus","g":"m","f":68.4,"zh":"上面"},{"w":"trace","g":"f","f":68.28,"zh":"痕迹"},{"w":"demande","g":"f","f":68.08,"zh":"请求"},{"w":"laisse","g":"f","f":68.0,"zh":"牵引绳"},{"w":"code","g":"m","f":67.85,"zh":"密码；代码"},{"w":"félicitation","g":"f","f":67.83,"zh":"祝贺"},{"w":"résultat","g":"m","f":67.55,"zh":"结果"},{"w":"monstre","g":"m","f":67.46,"zh":"怪物"},{"w":"centre","g":"m","f":66.81,"zh":"中心"},{"w":"rôle","g":"m","f":66.72,"zh":"角色"},{"w":"zone","g":"f","f":66.65,"zh":"区域"},{"w":"morceau","g":"m","f":66.11,"zh":"块；片段"},{"w":"douleur","g":"f","f":66.03,"zh":"疼痛"},{"w":"bas","g":"m","f":65.76,"zh":"长袜"},{"w":"souvenir","g":"m","f":65.37,"zh":"回忆"},{"w":"bande","g":"f","f":65.25,"zh":"带子"},{"w":"camion","g":"m","f":65.24,"zh":"卡车"},{"w":"chaussure","g":"f","f":64.94,"zh":"鞋"},{"w":"nourriture","g":"f","f":64.92,"zh":"食物"},{"w":"don","g":"m","f":64.43,"zh":"礼物；捐赠"},{"w":"liberté","g":"f","f":64.33,"zh":"自由"},{"w":"dent","g":"f","f":64.28,"zh":"牙齿"},{"w":"match","g":"m","f":64.27,"zh":"比赛"},{"w":"nez","g":"m","f":64.24,"zh":"鼻子"},{"w":"planète","g":"f","f":64.11,"zh":"行星"},{"w":"colonel","g":"m","f":64.09,"zh":"上校"},{"w":"vêtement","g":"m","f":63.25,"zh":"衣服"},{"w":"sexe","g":"m","f":63.22,"zh":"性；性别"},{"w":"couleur","g":"f","f":63.16,"zh":"颜色"},{"w":"lycée","g":"m","f":62.71,"zh":"高中"},{"w":"défense","g":"f","f":62.48,"zh":"防御"},{"w":"détail","g":"m","f":62.4,"zh":"细节"},{"w":"secours","g":"m","f":62.32,"zh":"救援"},{"w":"conversation","g":"f","f":62.23,"zh":"谈话"},{"w":"bonne","g":"f","f":62.14,"zh":"女仆"},{"w":"thé","g":"m","f":61.98,"zh":"茶"},{"w":"mensonge","g":"m","f":61.93,"zh":"谎言"},{"w":"procès","g":"m","f":61.73,"zh":"诉讼"},{"w":"programme","g":"m","f":61.59,"zh":"节目；计划"},{"w":"tas","g":"m","f":61.48,"zh":"堆"},{"w":"terrain","g":"m","f":61.22,"zh":"场地"},{"w":"billet","g":"m","f":60.99,"zh":"票"},{"w":"souci","g":"m","f":60.9,"zh":"烦恼"},{"w":"tante","g":"f","f":60.86,"zh":"姑妈；姨妈"},{"w":"poisson","g":"m","f":60.62,"zh":"鱼"},{"w":"pitié","g":"f","f":60.47,"zh":"怜悯"},{"w":"note","g":"f","f":60.31,"zh":"分数；笔记"},{"w":"grand-mère","g":"f","f":60.14,"zh":"祖母；外婆"},{"w":"dommage","g":"m","f":59.68,"zh":"遗憾"},{"w":"directeur","g":"m","f":59.39,"zh":"经理；校长"},{"w":"devoir","g":"m","f":59.15,"zh":"作业；义务"},{"w":"village","g":"m","f":58.96,"zh":"村庄"},{"w":"solution","g":"f","f":58.87,"zh":"解决办法"},{"w":"sol","g":"m","f":58.75,"zh":"地面"},{"w":"fric","g":"m","f":58.7,"zh":"钱"},{"w":"spectacle","g":"m","f":58.69,"zh":"演出"},{"w":"présent","g":"m","f":58.31,"zh":"现在；礼物"},{"w":"respect","g":"m","f":58.23,"zh":"尊重"},{"w":"contrat","g":"m","f":58.2,"zh":"合同"},{"w":"lien","g":"m","f":58.01,"zh":"联系；纽带"},{"w":"couteau","g":"m","f":57.53,"zh":"刀"},{"w":"réalité","g":"f","f":57.52,"zh":"现实"},{"w":"maladie","g":"f","f":57.08,"zh":"疾病"},{"w":"piste","g":"f","f":57.06,"zh":"跑道；线索"},{"w":"déjeuner","g":"m","f":56.48,"zh":"午餐"},{"w":"fil","g":"m","f":56.34,"zh":"线"},{"w":"pression","g":"f","f":56.3,"zh":"压力"},{"w":"sortie","g":"f","f":55.79,"zh":"出口"},{"w":"suspect","g":"m","f":55.72,"zh":"嫌疑人"},{"w":"justice","g":"f","f":55.42,"zh":"正义；司法"},{"w":"fantôme","g":"m","f":55.34,"zh":"幽灵"},{"w":"cible","g":"f","f":55.33,"zh":"目标"},{"w":"vacance","g":"f","f":55.24,"zh":"假期"},{"w":"blessure","g":"f","f":54.94,"zh":"伤口"},{"w":"vent","g":"m","f":54.91,"zh":"风"},{"w":"costume","g":"m","f":54.84,"zh":"西装"},{"w":"bouteille","g":"f","f":54.65,"zh":"瓶子"},{"w":"série","g":"f","f":54.47,"zh":"系列"},{"w":"crise","g":"f","f":54.39,"zh":"危机"},{"w":"voie","g":"f","f":54.27,"zh":"道路；轨道"},{"w":"différence","g":"f","f":54.1,"zh":"差别"},{"w":"champ","g":"m","f":54.06,"zh":"田野"},{"w":"cousin","g":"m","f":53.95,"zh":"表兄弟"},{"w":"gâteau","g":"m","f":53.9,"zh":"蛋糕"},{"w":"restaurant","g":"m","f":52.84,"zh":"餐馆"},{"w":"mademoiselle","g":"f","f":52.75,"zh":"小姐"},{"w":"star","g":"f","f":52.59,"zh":"明星"},{"w":"grand-père","g":"m","f":52.32,"zh":"祖父；外公"},{"w":"week-end","g":"m","f":52.17,"zh":"周末"},{"w":"carrière","g":"f","f":51.81,"zh":"事业"},{"w":"langue","g":"f","f":51.76,"zh":"语言"},{"w":"poche","g":"f","f":51.13,"zh":"口袋"},{"w":"repas","g":"m","f":51.12,"zh":"一顿饭"},{"w":"commandant","g":"m","f":50.86,"zh":"指挥官"},{"w":"pierre","g":"f","f":50.86,"zh":"石头"},{"w":"taxi","g":"m","f":50.77,"zh":"出租车"},{"w":"signal","g":"m","f":50.02,"zh":"信号"},{"w":"changement","g":"m","f":49.95,"zh":"变化"},{"w":"bus","g":"m","f":49.83,"zh":"公交车"},{"w":"taille","g":"f","f":49.64,"zh":"尺寸；身高"},{"w":"goût","g":"m","f":49.56,"zh":"味道"},{"w":"voisin","g":"m","f":49.23,"zh":"邻居"},{"w":"public","g":"m","f":49.21,"zh":"公众"},{"w":"direction","g":"f","f":49.19,"zh":"方向"},{"w":"beauté","g":"f","f":49.12,"zh":"美丽"},{"w":"ton","g":"m","f":48.84,"zh":"语气"},{"w":"nature","g":"f","f":48.73,"zh":"自然"},{"w":"droite","g":"f","f":48.66,"zh":"右边"},{"w":"danse","g":"f","f":48.62,"zh":"舞蹈"},{"w":"nombre","g":"m","f":48.61,"zh":"数目；数量"},{"w":"pont","g":"m","f":48.49,"zh":"桥"},{"w":"courage","g":"m","f":48.28,"zh":"勇气"},{"w":"nord","g":"m","f":48.13,"zh":"北方"},{"w":"demain","g":"m","f":48.11,"zh":"明天"},{"w":"valeur","g":"f","f":47.95,"zh":"价值"},{"w":"bonheur","g":"m","f":47.64,"zh":"幸福"},{"w":"presse","g":"f","f":47.56,"zh":"新闻界；匆忙"},{"w":"prêt","g":"m","f":47.19,"zh":"贷款"},{"w":"médicament","g":"m","f":47.16,"zh":"药物"},{"w":"terme","g":"m","f":46.96,"zh":"期限；术语"},{"w":"regard","g":"m","f":46.72,"zh":"目光"},{"w":"montagne","g":"f","f":46.48,"zh":"山"},{"w":"cellule","g":"f","f":46.2,"zh":"细胞"},{"w":"pensée","g":"f","f":46.18,"zh":"思想"},{"w":"voleur","g":"m","f":46.15,"zh":"小偷"},{"w":"rire","g":"m","f":46.07,"zh":"笑；笑声"},{"w":"couverture","g":"f","f":46.03,"zh":"毯子；封面"},{"w":"faveur","g":"f","f":45.78,"zh":"恩惠"},{"w":"perte","g":"f","f":45.59,"zh":"损失"},{"w":"chapeau","g":"m","f":45.38,"zh":"帽子"},{"w":"démon","g":"m","f":45.36,"zh":"恶魔"},{"w":"tribunal","g":"m","f":45.04,"zh":"法庭"},{"w":"procureur","g":"m","f":44.94,"zh":"检察官"},{"w":"futur","g":"m","f":44.73,"zh":"未来"},{"w":"menace","g":"f","f":44.62,"zh":"威胁"},{"w":"sein","g":"m","f":44.35,"zh":"胸部"},{"w":"marche","g":"f","f":44.25,"zh":"行走；台阶"},{"w":"destin","g":"m","f":44.23,"zh":"命运"},{"w":"pause","g":"f","f":44.16,"zh":"休息"},{"w":"connaissance","g":"f","f":44.15,"zh":"知识"},{"w":"contraire","g":"m","f":44.06,"zh":"相反"},{"w":"leçon","g":"f","f":44.04,"zh":"课；教训"},{"w":"campagne","g":"f","f":43.87,"zh":"乡村；运动"},{"w":"connard","g":"m","f":43.82,"zh":"混蛋"},{"w":"shérif","g":"m","f":43.78,"zh":"警长"},{"w":"sort","g":"m","f":43.62,"zh":"命运"},{"w":"pain","g":"m","f":43.41,"zh":"面包"},{"w":"mouvement","g":"m","f":43.29,"zh":"运动"},{"w":"joie","g":"f","f":43.27,"zh":"快乐"},{"w":"responsabilité","g":"f","f":43.25,"zh":"责任"},{"w":"genou","g":"m","f":43.19,"zh":"膝盖"},{"w":"mètre","g":"m","f":43.15,"zh":"米"},{"w":"bâtiment","g":"m","f":43.08,"zh":"建筑物"},{"w":"lait","g":"m","f":43.02,"zh":"牛奶"},{"w":"pardon","g":"m","f":42.95,"zh":"原谅"},{"w":"présence","g":"f","f":42.82,"zh":"存在；出席"},{"w":"saison","g":"f","f":42.66,"zh":"季节"},{"w":"son","g":"m","f":42.66,"zh":"声音"},{"w":"magie","g":"f","f":42.65,"zh":"魔法"},{"w":"talent","g":"m","f":42.58,"zh":"才能"},{"w":"discours","g":"m","f":42.57,"zh":"演讲"},{"w":"cou","g":"m","f":42.49,"zh":"脖子"},{"w":"montre","g":"f","f":42.3,"zh":"手表"},{"w":"parc","g":"m","f":42.28,"zh":"公园"},{"w":"toit","g":"m","f":42.13,"zh":"屋顶"},{"w":"policier","g":"m","f":42.11,"zh":"警察"},{"w":"labo","g":"m","f":42.01,"zh":"实验室"},{"w":"condition","g":"f","f":41.76,"zh":"条件"},{"w":"poulet","g":"m","f":41.63,"zh":"鸡；鸡肉"},{"w":"plage","g":"f","f":41.56,"zh":"海滩"},{"w":"jardin","g":"m","f":41.52,"zh":"花园"},{"w":"charge","g":"f","f":41.44,"zh":"负荷；任务"},{"w":"vitesse","g":"f","f":41.02,"zh":"速度"},{"w":"coffre","g":"m","f":40.84,"zh":"箱子；保险箱"},{"w":"sérieux","g":"m","f":40.84,"zh":"严肃"},{"w":"génie","g":"m","f":40.83,"zh":"天才"},{"w":"flingue","g":"m","f":40.66,"zh":"枪"},{"w":"folie","g":"f","f":40.65,"zh":"疯狂"},{"w":"majesté","g":"f","f":40.64,"zh":"威严"},{"w":"pantalon","g":"m","f":40.58,"zh":"裤子"},{"w":"détective","g":"m","f":40.36,"zh":"侦探"},{"w":"limite","g":"f","f":40.29,"zh":"界限"},{"w":"théorie","g":"f","f":40.25,"zh":"理论"},{"w":"trésor","g":"m","f":40.24,"zh":"宝藏"},{"w":"piège","g":"m","f":40.22,"zh":"陷阱"},{"w":"criminel","g":"m","f":40.02,"zh":"罪犯"},{"w":"donnée","g":"f","f":39.94,"zh":"数据"},{"w":"date","g":"f","f":39.93,"zh":"日期"},{"w":"cinéma","g":"m","f":39.93,"zh":"电影；电影院"},{"w":"passage","g":"m","f":39.91,"zh":"通道"},{"w":"siècle","g":"m","f":39.55,"zh":"世纪"},{"w":"succès","g":"m","f":39.29,"zh":"成功"},{"w":"sorcier","g":"m","f":39.24,"zh":"巫师"},{"w":"traitement","g":"m","f":39.21,"zh":"治疗"},{"w":"côte","g":"f","f":39.0,"zh":"海岸；肋骨"},{"w":"samedi","g":"m","f":38.96,"zh":"星期六"},{"w":"paquet","g":"m","f":38.71,"zh":"包裹"},{"w":"miracle","g":"m","f":38.68,"zh":"奇迹"},{"w":"site","g":"m","f":38.63,"zh":"网站；景点"},{"w":"bataille","g":"f","f":38.49,"zh":"战斗"},{"w":"fesse","g":"f","f":38.27,"zh":"屁股"},{"w":"millier","g":"m","f":38.08,"zh":"千"},{"w":"bal","g":"m","f":38.07,"zh":"舞会"},{"w":"dimanche","g":"m","f":37.88,"zh":"星期日"},{"w":"fac","g":"f","f":37.81,"zh":"大学"},{"w":"poids","g":"m","f":37.68,"zh":"重量"},{"w":"viande","g":"f","f":37.58,"zh":"肉"},{"w":"chaise","g":"f","f":37.55,"zh":"椅子"},{"w":"menteur","g":"m","f":37.55,"zh":"骗子"},{"w":"tir","g":"m","f":37.52,"zh":"射击"},{"w":"bête","g":"f","f":37.5,"zh":"野兽"},{"w":"joueur","g":"m","f":37.29,"zh":"玩家"},{"w":"naissance","g":"f","f":37.11,"zh":"出生"},{"w":"parti","g":"m","f":37.07,"zh":"政党"},{"w":"vision","g":"f","f":37.02,"zh":"视觉"},{"w":"titre","g":"m","f":37.0,"zh":"标题"},{"w":"rat","g":"m","f":36.96,"zh":"老鼠"},{"w":"vente","g":"f","f":36.96,"zh":"销售"},{"w":"rencontre","g":"f","f":36.95,"zh":"相遇"},{"w":"sport","g":"m","f":36.91,"zh":"运动"},{"w":"douche","g":"f","f":36.9,"zh":"淋浴"},{"w":"mets","g":"m","f":36.9,"zh":"菜肴"},{"w":"cri","g":"m","f":36.81,"zh":"叫喊"},{"w":"volonté","g":"f","f":36.69,"zh":"意愿"},{"w":"chasse","g":"f","f":36.68,"zh":"狩猎"},{"w":"promesse","g":"f","f":36.66,"zh":"承诺"},{"w":"mine","g":"f","f":36.59,"zh":"矿；脸色"},{"w":"station","g":"f","f":36.58,"zh":"车站"},{"w":"cadavre","g":"m","f":36.5,"zh":"尸体"},{"w":"tableau","g":"m","f":36.49,"zh":"画"},{"w":"retraite","g":"f","f":36.44,"zh":"退休"},{"w":"savoir","g":"m","f":36.27,"zh":"知识"},{"w":"prisonnier","g":"m","f":36.25,"zh":"囚犯"},{"w":"siège","g":"m","f":36.22,"zh":"座位"},{"w":"fiancé","g":"m","f":36.04,"zh":"未婚夫"},{"w":"cigarette","g":"f","f":35.94,"zh":"香烟"},{"w":"queue","g":"f","f":35.74,"zh":"尾巴"},{"w":"salon","g":"m","f":35.73,"zh":"客厅"},{"w":"chaîne","g":"f","f":35.72,"zh":"链条；频道"},{"w":"créature","g":"f","f":35.72,"zh":"生物"},{"w":"bague","g":"f","f":35.65,"zh":"戒指"},{"w":"protection","g":"f","f":35.62,"zh":"保护"},{"w":"chemise","g":"f","f":35.57,"zh":"衬衫"},{"w":"fusil","g":"m","f":35.25,"zh":"步枪"},{"w":"conscience","g":"f","f":35.24,"zh":"意识；良心"},{"w":"victoire","g":"f","f":35.11,"zh":"胜利"},{"w":"produit","g":"m","f":35.07,"zh":"产品"},{"w":"mesure","g":"f","f":35.03,"zh":"措施"},{"w":"centaine","g":"f","f":34.92,"zh":"一百左右"},{"w":"distance","g":"f","f":34.84,"zh":"距离"},{"w":"corde","g":"f","f":34.82,"zh":"绳子"},{"w":"mandat","g":"m","f":34.8,"zh":"委托"},{"w":"meurtrier","g":"m","f":34.75,"zh":"凶手"},{"w":"veste","g":"f","f":34.73,"zh":"夹克"},{"w":"moteur","g":"m","f":34.73,"zh":"发动机"},{"w":"style","g":"m","f":34.73,"zh":"风格"},{"w":"surveillance","g":"f","f":34.49,"zh":"监视"},{"w":"cancer","g":"m","f":34.49,"zh":"癌症"},{"w":"chèque","g":"m","f":34.29,"zh":"支票"},{"w":"cauchemar","g":"m","f":34.22,"zh":"噩梦"},{"w":"science","g":"f","f":34.2,"zh":"科学"},{"w":"gaz","g":"m","f":34.05,"zh":"气体"},{"w":"sourire","g":"m","f":33.66,"zh":"微笑"},{"w":"fruit","g":"m","f":33.64,"zh":"水果"},{"w":"pistolet","g":"m","f":33.39,"zh":"手枪"},{"w":"métier","g":"m","f":33.38,"zh":"职业"},{"w":"lèvre","g":"f","f":33.31,"zh":"嘴唇"},{"w":"pluie","g":"f","f":33.26,"zh":"雨"},{"w":"bouton","g":"m","f":32.9,"zh":"按钮；纽扣"},{"w":"baiser","g":"m","f":32.81,"zh":"吻"},{"w":"traduction","g":"f","f":32.63,"zh":"翻译"},{"w":"concert","g":"m","f":32.59,"zh":"音乐会"},{"w":"taureau","g":"m","f":32.5,"zh":"公牛"},{"w":"puissance","g":"f","f":32.48,"zh":"力量"},{"w":"personnage","g":"m","f":32.47,"zh":"人物"},{"w":"tombe","g":"f","f":32.26,"zh":"坟墓"},{"w":"rivière","g":"f","f":32.13,"zh":"河流"},{"w":"zéro","g":"m","f":32.11,"zh":"零"},{"w":"violence","g":"f","f":32.11,"zh":"暴力"},{"w":"chocolat","g":"m","f":31.96,"zh":"巧克力"},{"w":"caisse","g":"f","f":31.93,"zh":"收银台"},{"w":"ventre","g":"m","f":31.88,"zh":"肚子"},{"w":"suicide","g":"m","f":31.81,"zh":"自杀"},{"w":"serveur","g":"m","f":31.71,"zh":"服务器"},{"w":"puce","g":"f","f":31.65,"zh":"跳蚤；芯片"},{"w":"vendredi","g":"m","f":31.64,"zh":"星期五"},{"w":"rumeur","g":"f","f":31.56,"zh":"谣言"},{"w":"gouvernante","g":"f","f":31.54,"zh":"女管家"},{"w":"gouverneur","g":"m","f":31.54,"zh":"州长"},{"w":"fuite","g":"f","f":31.46,"zh":"逃跑；泄漏"},{"w":"prêtre","g":"m","f":31.46,"zh":"神父"},{"w":"pizza","g":"f","f":31.36,"zh":"披萨"},{"w":"crédit","g":"m","f":31.35,"zh":"信用"},{"w":"forêt","g":"f","f":31.34,"zh":"森林"},{"w":"commande","g":"f","f":31.33,"zh":"订单"},{"w":"singe","g":"m","f":31.32,"zh":"猴子"},{"w":"lapin","g":"m","f":31.28,"zh":"兔子"},{"w":"fiston","g":"m","f":31.07,"zh":"儿子"},{"w":"pomme","g":"f","f":31.06,"zh":"苹果"},{"w":"jury","g":"m","f":31.04,"zh":"陪审团"},{"w":"sergent","g":"m","f":30.94,"zh":"中士"},{"w":"bouge","g":"m","f":30.89,"zh":"破旧住所"},{"w":"lunette","g":"f","f":30.83,"zh":"眼镜"},{"w":"disque","g":"m","f":30.82,"zh":"唱片；磁盘"},{"w":"lundi","g":"m","f":30.81,"zh":"星期一"},{"w":"version","g":"f","f":30.75,"zh":"版本"},{"w":"réseau","g":"m","f":30.68,"zh":"网络"},{"w":"mise","g":"f","f":30.6,"zh":"赌注"},{"w":"loup","g":"m","f":30.55,"zh":"狼"},{"w":"plat","g":"m","f":30.46,"zh":"盘子；菜"},{"w":"navire","g":"m","f":30.41,"zh":"船"},{"w":"cabinet","g":"m","f":30.37,"zh":"事务所；诊所"},{"w":"poupée","g":"f","f":30.35,"zh":"娃娃"},{"w":"couille","g":"f","f":30.34,"zh":"睾丸"},{"w":"sommeil","g":"m","f":30.33,"zh":"睡眠"},{"w":"repos","g":"m","f":30.26,"zh":"休息"},{"w":"rayon","g":"m","f":30.2,"zh":"光线；货架"},{"w":"rayonne","g":"f","f":30.2,"zh":"人造丝"},{"w":"vote","g":"m","f":30.19,"zh":"投票"},{"w":"comportement","g":"m","f":30.17,"zh":"行为"},{"w":"valise","g":"f","f":30.14,"zh":"行李箱"},{"w":"chauffeur","g":"m","f":30.07,"zh":"司机"},{"w":"marié","g":"m","f":30.07,"zh":"新郎"},{"w":"document","g":"m","f":30.03,"zh":"文件"},{"w":"crétin","g":"m","f":30.03,"zh":"傻瓜"},{"w":"discussion","g":"f","f":30.01,"zh":"讨论"},{"w":"frontière","g":"f","f":30.0,"zh":"边界"},{"w":"peinture","g":"f","f":29.94,"zh":"绘画；油漆"},{"w":"propriété","g":"f","f":29.92,"zh":"财产"},{"w":"pilote","g":"m","f":29.83,"zh":"飞行员"},{"w":"rock","g":"m","f":29.82,"zh":"摇滚"},{"w":"gorge","g":"f","f":29.79,"zh":"喉咙"},{"w":"possibilité","g":"f","f":29.61,"zh":"可能性"},{"w":"véhicule","g":"m","f":29.58,"zh":"车辆"},{"w":"tâche","g":"f","f":29.56,"zh":"任务；污渍"},{"w":"théâtre","g":"m","f":29.55,"zh":"剧院"},{"w":"prise","g":"f","f":29.49,"zh":"插座；捕获"},{"w":"gardien","g":"m","f":29.41,"zh":"看守；守门员"},{"w":"champion","g":"m","f":29.34,"zh":"冠军"},{"w":"vœu","g":"m","f":29.33,"zh":"愿望"},{"w":"poil","g":"m","f":29.28,"zh":"毛"},{"w":"permission","g":"f","f":29.19,"zh":"许可"},{"w":"choc","g":"m","f":29.18,"zh":"冲击"},{"w":"pari","g":"m","f":29.16,"zh":"赌注"},{"w":"fromage","g":"m","f":29.12,"zh":"奶酪"},{"w":"château","g":"m","f":29.09,"zh":"城堡"},{"w":"qualité","g":"f","f":29.05,"zh":"质量"},{"w":"couloir","g":"m","f":28.98,"zh":"走廊"},{"w":"soutien","g":"m","f":28.96,"zh":"支持"},{"w":"paradis","g":"m","f":28.94,"zh":"天堂"},{"w":"désir","g":"m","f":28.93,"zh":"欲望"},{"w":"divorce","g":"m","f":28.8,"zh":"离婚"},{"w":"réaction","g":"f","f":28.77,"zh":"反应"},{"w":"coupe","g":"f","f":28.76,"zh":"杯子；剪裁"},{"w":"fortune","g":"f","f":28.66,"zh":"财富"},{"w":"dette","g":"f","f":28.65,"zh":"债务"},{"w":"serpent","g":"m","f":28.51,"zh":"蛇"},{"w":"studio","g":"m","f":28.5,"zh":"单间公寓；工作室"},{"w":"déclaration","g":"f","f":28.48,"zh":"声明"},{"w":"minuit","g":"m","f":28.4,"zh":"午夜"},{"w":"chiffre","g":"m","f":28.29,"zh":"数字"},{"w":"fer","g":"m","f":28.28,"zh":"铁"},{"w":"garage","g":"m","f":28.13,"zh":"车库"},{"w":"reine","g":"f","f":28.01,"zh":"女王"},{"w":"conférence","g":"f","f":27.81,"zh":"讲座；会议"},{"w":"département","g":"m","f":27.8,"zh":"部门；省"},{"w":"piscine","g":"f","f":27.71,"zh":"游泳池"},{"w":"midi","g":"m","f":27.63,"zh":"中午"},{"w":"copie","g":"f","f":27.6,"zh":"副本"},{"w":"plaque","g":"f","f":27.6,"zh":"板；牌子"},{"w":"virus","g":"m","f":27.51,"zh":"病毒"},{"w":"ballon","g":"m","f":27.45,"zh":"球"},{"w":"chaleur","g":"f","f":27.42,"zh":"热量"},{"w":"porc","g":"m","f":27.41,"zh":"猪；猪肉"},{"w":"manteau","g":"m","f":27.35,"zh":"大衣"},{"w":"larme","g":"f","f":27.16,"zh":"眼泪"},{"w":"nana","g":"f","f":27.15,"zh":"女孩"},{"w":"citoyen","g":"m","f":26.94,"zh":"公民"},{"w":"neige","g":"f","f":26.92,"zh":"雪"},{"w":"bite","g":"f","f":26.77,"zh":"阴茎"},{"w":"magazine","g":"m","f":26.72,"zh":"杂志"},{"w":"lendemain","g":"m","f":26.68,"zh":"第二天"},{"w":"troupe","g":"f","f":26.59,"zh":"部队；剧团"},{"w":"coq","g":"m","f":26.57,"zh":"公鸡"},{"w":"personnel","g":"m","f":26.46,"zh":"人员；员工"},{"w":"chasseur","g":"m","f":26.38,"zh":"猎人"},{"w":"français","g":"m","f":26.37,"zh":"法语"},{"w":"poitrine","g":"f","f":26.26,"zh":"胸部"},{"w":"crâne","g":"m","f":26.25,"zh":"头骨"},{"w":"sandwich","g":"m","f":26.16,"zh":"三明治"},{"w":"chou","g":"m","f":26.16,"zh":"卷心菜"},{"w":"foyer","g":"m","f":26.16,"zh":"家；炉灶"},{"w":"prénom","g":"m","f":26.13,"zh":"名字"},{"w":"concours","g":"m","f":26.04,"zh":"竞赛；考试"},{"w":"foule","g":"f","f":26.01,"zh":"人群"},{"w":"vélo","g":"m","f":25.99,"zh":"自行车"},{"w":"bonbon","g":"m","f":25.98,"zh":"糖果"},{"w":"réputation","g":"f","f":25.96,"zh":"名声"},{"w":"conseiller","g":"m","f":25.92,"zh":"顾问"},{"w":"salaire","g":"m","f":25.78,"zh":"工资"},{"w":"ceinture","g":"f","f":25.76,"zh":"腰带"},{"w":"bloc","g":"m","f":25.76,"zh":"块"},{"w":"technologie","g":"f","f":25.75,"zh":"技术"},{"w":"poubelle","g":"f","f":25.61,"zh":"垃圾桶"},{"w":"sud","g":"m","f":25.55,"zh":"南"},{"w":"sucre","g":"m","f":25.54,"zh":"糖"},{"w":"chute","g":"f","f":25.53,"zh":"跌落；瀑布"},{"w":"conséquence","g":"f","f":25.47,"zh":"后果"},{"w":"communauté","g":"f","f":25.46,"zh":"社区"},{"w":"dessin","g":"m","f":25.46,"zh":"图画；绘画"},{"w":"diamant","g":"m","f":25.43,"zh":"钻石"},{"w":"mystère","g":"m","f":25.29,"zh":"谜团；神秘"},{"w":"rencard","g":"m","f":25.25,"zh":"约会"},{"w":"manque","g":"m","f":25.23,"zh":"缺乏"},{"w":"liaison","g":"f","f":25.18,"zh":"联系；联络"},{"w":"gant","g":"m","f":25.08,"zh":"手套"},{"w":"jus","g":"m","f":25.06,"zh":"果汁"},{"w":"chair","g":"f","f":25.04,"zh":"肉；肌肤"},{"w":"méthode","g":"f","f":25.04,"zh":"方法"},{"w":"cérémonie","g":"f","f":24.99,"zh":"仪式"},{"w":"soupe","g":"f","f":24.97,"zh":"汤"},{"w":"dragon","g":"m","f":24.94,"zh":"龙"},{"w":"lac","g":"m","f":24.89,"zh":"湖"},{"w":"kilomètre","g":"m","f":24.85,"zh":"公里"},{"w":"pot","g":"m","f":24.84,"zh":"罐子；花盆"},{"w":"barre","g":"f","f":24.8,"zh":"杆子；横杠"},{"w":"patte","g":"f","f":24.79,"zh":"爪子；腿"},{"w":"séance","g":"f","f":24.74,"zh":"会议；场次"},{"w":"front","g":"m","f":24.71,"zh":"额头"},{"w":"mardi","g":"m","f":24.71,"zh":"星期二"},{"w":"parking","g":"m","f":24.71,"zh":"停车场"},{"w":"procédure","g":"f","f":24.68,"zh":"程序；手续"},{"w":"nation","g":"f","f":24.67,"zh":"民族；国家"},{"w":"boisson","g":"f","f":24.63,"zh":"饮料"},{"w":"pilule","g":"f","f":24.62,"zh":"药丸"},{"w":"surface","g":"f","f":24.58,"zh":"表面；面积"},{"w":"jouet","g":"m","f":24.55,"zh":"玩具"},{"w":"péché","g":"m","f":24.55,"zh":"罪恶"},{"w":"région","g":"f","f":24.41,"zh":"地区"},{"w":"tournée","g":"f","f":24.19,"zh":"巡演；巡回"},{"w":"bienvenue","g":"f","f":24.13,"zh":"欢迎"},{"w":"malheur","g":"m","f":24.05,"zh":"不幸；灾祸"},{"w":"circonstance","g":"f","f":24.02,"zh":"情况；场合"},{"w":"capacité","g":"f","f":24.02,"zh":"能力；容量"},{"w":"candidat","g":"m","f":24.01,"zh":"候选人"},{"w":"bêtise","g":"f","f":23.96,"zh":"蠢事"},{"w":"récompense","g":"f","f":23.88,"zh":"奖励；报酬"},{"w":"cage","g":"f","f":23.72,"zh":"笼子"},{"w":"placard","g":"m","f":23.71,"zh":"壁橱"},{"w":"méchant","g":"m","f":23.71,"zh":"坏人"},{"w":"cassette","g":"f","f":23.67,"zh":"磁带"},{"w":"communication","g":"f","f":23.64,"zh":"交流；通信"},{"w":"fichier","g":"m","f":23.54,"zh":"文件"},{"w":"miroir","g":"m","f":23.54,"zh":"镜子"},{"w":"rythme","g":"m","f":23.54,"zh":"节奏"},{"w":"souffrance","g":"f","f":23.51,"zh":"痛苦"},{"w":"tempête","g":"f","f":23.5,"zh":"暴风雨"},{"w":"prière","g":"f","f":23.5,"zh":"祈祷"},{"w":"degré","g":"m","f":23.43,"zh":"度；程度"},{"w":"renfort","g":"m","f":23.41,"zh":"增援"},{"w":"serviette","g":"f","f":23.41,"zh":"毛巾；餐巾"},{"w":"médecine","g":"f","f":23.39,"zh":"医学；药"},{"w":"fonds","g":"m","f":23.38,"zh":"资金"},{"w":"royaume","g":"m","f":23.38,"zh":"王国"},{"w":"boss","g":"m","f":23.33,"zh":"老板"},{"w":"tasse","g":"f","f":23.29,"zh":"杯子"},{"w":"tenue","g":"f","f":23.29,"zh":"服装；穿着"},{"w":"passion","g":"f","f":23.27,"zh":"激情；热爱"},{"w":"ticket","g":"m","f":23.21,"zh":"票"},{"w":"légende","g":"f","f":23.2,"zh":"传说；图例"},{"w":"tireur","g":"m","f":23.17,"zh":"射手"},{"w":"tension","g":"f","f":23.14,"zh":"紧张；血压"},{"w":"jeudi","g":"m","f":23.12,"zh":"星期四"},{"w":"collier","g":"m","f":23.02,"zh":"项链"},{"w":"canapé","g":"m","f":22.97,"zh":"沙发"},{"w":"permis","g":"m","f":22.95,"zh":"许可证；驾照"},{"w":"facture","g":"f","f":22.94,"zh":"发票；账单"},{"w":"tuyau","g":"m","f":22.91,"zh":"管子"},{"w":"port","g":"m","f":22.91,"zh":"港口"},{"w":"whisky","g":"m","f":22.89,"zh":"威士忌"},{"w":"réserve","g":"f","f":22.83,"zh":"储备；保留"},{"w":"pile","g":"f","f":22.79,"zh":"电池；堆"},{"w":"milliard","g":"m","f":22.73,"zh":"十亿"},{"w":"congé","g":"m","f":22.73,"zh":"假期"},{"w":"ménage","g":"m","f":22.72,"zh":"家务"},{"w":"moto","g":"f","f":22.72,"zh":"摩托车"},{"w":"juif","g":"m","f":22.7,"zh":"犹太人"},{"w":"fonction","g":"f","f":22.69,"zh":"功能；职务"},{"w":"paire","g":"f","f":22.65,"zh":"一双；一对"},{"w":"comité","g":"m","f":22.63,"zh":"委员会"},{"w":"vengeance","g":"f","f":22.56,"zh":"报复"},{"w":"bagage","g":"m","f":22.56,"zh":"行李"},{"w":"secteur","g":"m","f":22.55,"zh":"部门；地区"},{"w":"proposition","g":"f","f":22.54,"zh":"提议；建议"},{"w":"feuille","g":"f","f":22.46,"zh":"叶子；纸"},{"w":"jugement","g":"m","f":22.45,"zh":"判断；判决"},{"w":"matériel","g":"m","f":22.44,"zh":"设备；材料"},{"w":"domaine","g":"m","f":22.43,"zh":"领域；庄园"},{"w":"sou","g":"m","f":22.41,"zh":"钱"},{"w":"tunnel","g":"m","f":22.33,"zh":"隧道"},{"w":"sel","g":"m","f":22.19,"zh":"盐"},{"w":"principe","g":"m","f":22.14,"zh":"原则"},{"w":"génération","g":"f","f":21.98,"zh":"一代；世代"},{"w":"section","g":"f","f":21.96,"zh":"部门；部分"},{"w":"cochon","g":"m","f":21.95,"zh":"猪"},{"w":"tapis","g":"m","f":21.92,"zh":"地毯"},{"w":"désert","g":"m","f":21.9,"zh":"沙漠"},{"w":"botte","g":"f","f":21.87,"zh":"靴子；捆"},{"w":"cercle","g":"m","f":21.85,"zh":"圆圈"},{"w":"bibliothèque","g":"f","f":21.85,"zh":"图书馆"},{"w":"gloire","g":"f","f":21.84,"zh":"荣耀"},{"w":"couche","g":"f","f":21.83,"zh":"层；尿布"},{"w":"renseignement","g":"m","f":21.75,"zh":"情报"},{"w":"joue","g":"f","f":21.74,"zh":"脸颊"},{"w":"signature","g":"f","f":21.7,"zh":"签名"},{"w":"rang","g":"m","f":21.61,"zh":"排；行列"},{"w":"promis","g":"m","f":21.6,"zh":"承诺的"},{"w":"neveu","g":"m","f":21.53,"zh":"侄子"},{"w":"tentative","g":"f","f":21.46,"zh":"尝试"},{"w":"tribu","g":"f","f":21.45,"zh":"部落"},{"w":"profil","g":"m","f":21.44,"zh":"侧影；轮廓"},{"w":"gare","g":"f","f":21.43,"zh":"火车站"},{"w":"culture","g":"f","f":21.29,"zh":"文化"},{"w":"matière","g":"f","f":21.19,"zh":"物质；科目"},{"w":"courrier","g":"m","f":21.16,"zh":"邮件"},{"w":"pêche","g":"f","f":21.15,"zh":"桃子；钓鱼"},{"w":"sacrifice","g":"m","f":21.15,"zh":"牺牲"},{"w":"bagarre","g":"f","f":21.1,"zh":"打斗"},{"w":"soif","g":"f","f":21.05,"zh":"口渴"},{"w":"chirurgie","g":"f","f":21.0,"zh":"外科"},{"w":"nuage","g":"m","f":20.9,"zh":"云"},{"w":"souffle","g":"m","f":20.83,"zh":"气息"},{"w":"coïncidence","g":"f","f":20.79,"zh":"巧合"},{"w":"nerf","g":"m","f":20.79,"zh":"神经"},{"w":"disparition","g":"f","f":20.76,"zh":"消失"},{"w":"monnaie","g":"f","f":20.76,"zh":"零钱"},{"w":"territoire","g":"m","f":20.74,"zh":"领土"},{"w":"dispute","g":"f","f":20.71,"zh":"争吵"},{"w":"poison","g":"m","f":20.71,"zh":"毒药"},{"w":"sénateur","g":"m","f":20.68,"zh":"参议员"},{"w":"diplôme","g":"m","f":20.67,"zh":"文凭"},{"w":"sable","g":"m","f":20.61,"zh":"沙子"},{"w":"témoignage","g":"m","f":20.54,"zh":"证词"},{"w":"musée","g":"m","f":20.5,"zh":"博物馆"},{"w":"parfum","g":"m","f":20.48,"zh":"香水"},{"w":"scénario","g":"m","f":20.41,"zh":"剧本"},{"w":"phrase","g":"f","f":20.39,"zh":"句子"},{"w":"poussière","g":"f","f":20.31,"zh":"灰尘"},{"w":"roue","g":"f","f":20.21,"zh":"车轮"},{"w":"miel","g":"m","f":20.16,"zh":"蜂蜜"},{"w":"fumée","g":"f","f":20.14,"zh":"烟"},{"w":"dessous","g":"m","f":20.06,"zh":"下面"},{"w":"télévision","g":"f","f":20.06,"zh":"电视"},{"w":"salade","g":"f","f":20.04,"zh":"沙拉"},{"w":"tatouage","g":"m","f":19.99,"zh":"纹身"},{"w":"kilo","g":"m","f":19.98,"zh":"公斤"},{"w":"canon","g":"m","f":19.97,"zh":"大炮"},{"w":"tarte","g":"f","f":19.9,"zh":"馅饼"},{"w":"sommet","g":"m","f":19.85,"zh":"山顶"},{"w":"tradition","g":"f","f":19.78,"zh":"传统"},{"w":"thérapie","g":"f","f":19.74,"zh":"治疗"},{"w":"football","g":"m","f":19.73,"zh":"足球"},{"w":"piano","g":"m","f":19.7,"zh":"钢琴"},{"w":"foot","g":"m","f":19.69,"zh":"足球"},{"w":"chirurgien","g":"m","f":19.66,"zh":"外科医生"},{"w":"race","g":"f","f":19.58,"zh":"种族"},{"w":"vendeur","g":"m","f":19.55,"zh":"卖家"},{"w":"viol","g":"m","f":19.49,"zh":"强奸"},{"w":"patience","g":"f","f":19.46,"zh":"耐心"},{"w":"câble","g":"m","f":19.44,"zh":"电缆"},{"w":"clown","g":"m","f":19.42,"zh":"小丑"},{"w":"lutte","g":"f","f":19.41,"zh":"斗争"},{"w":"traître","g":"m","f":19.39,"zh":"叛徒"},{"w":"passeport","g":"m","f":19.34,"zh":"护照"},{"w":"lance","g":"f","f":19.29,"zh":"长矛"},{"w":"cabine","g":"f","f":19.28,"zh":"小舱；隔间"},{"w":"portefeuille","g":"m","f":19.26,"zh":"钱包"},{"w":"fièvre","g":"f","f":19.25,"zh":"发烧"},{"w":"livraison","g":"f","f":19.25,"zh":"送货"},{"w":"flamme","g":"f","f":19.24,"zh":"火焰"},{"w":"température","g":"f","f":19.2,"zh":"温度"},{"w":"bourse","g":"f","f":19.19,"zh":"奖学金；钱包"},{"w":"souris","g":"f","f":19.15,"zh":"老鼠"},{"w":"poumon","g":"m","f":19.14,"zh":"肺"},{"w":"loyer","g":"m","f":19.06,"zh":"房租"},{"w":"lampe","g":"f","f":19.05,"zh":"灯"},{"w":"plateau","g":"m","f":18.94,"zh":"托盘"},{"w":"stade","g":"m","f":18.9,"zh":"体育场"},{"w":"plante","g":"f","f":18.84,"zh":"植物"},{"w":"golf","g":"m","f":18.83,"zh":"高尔夫"},{"w":"comédie","g":"f","f":18.8,"zh":"喜剧"},{"w":"compétition","g":"f","f":18.8,"zh":"比赛"},{"w":"figure","g":"f","f":18.76,"zh":"脸；图形"},{"w":"clinique","g":"f","f":18.75,"zh":"诊所"},{"w":"grâce","g":"f","f":18.68,"zh":"优雅；恩典"},{"w":"vers","g":"m","f":18.63,"zh":"诗句"},{"w":"laboratoire","g":"m","f":18.62,"zh":"实验室"},{"w":"taux","g":"m","f":18.61,"zh":"比率"},{"w":"priorité","g":"f","f":18.57,"zh":"优先"},{"w":"saint","g":"m","f":18.54,"zh":"圣人"},{"w":"comte","g":"m","f":18.51,"zh":"伯爵"},{"w":"tonne","g":"f","f":18.51,"zh":"吨"},{"w":"commission","g":"f","f":18.49,"zh":"委员会；佣金"},{"w":"cirque","g":"m","f":18.48,"zh":"马戏团"},{"w":"clan","g":"m","f":18.44,"zh":"家族"},{"w":"poing","g":"m","f":18.42,"zh":"拳头"},{"w":"requin","g":"m","f":18.4,"zh":"鲨鱼"},{"w":"tissu","g":"m","f":18.37,"zh":"布料"},{"w":"cap","g":"m","f":18.35,"zh":"海角"},{"w":"producteur","g":"m","f":18.35,"zh":"生产者"},{"w":"trafic","g":"m","f":18.34,"zh":"交通"},{"w":"compagne","g":"f","f":18.33,"zh":"女伴"},{"w":"compagnon","g":"m","f":18.33,"zh":"同伴"},{"w":"mamie","g":"f","f":18.32,"zh":"奶奶"},{"w":"batterie","g":"f","f":18.3,"zh":"电池"},{"w":"personnalité","g":"f","f":18.3,"zh":"性格；人物"},{"w":"production","g":"f","f":18.24,"zh":"生产"},{"w":"t-shirt","g":"m","f":18.24,"zh":"T恤"},{"w":"bâton","g":"m","f":18.17,"zh":"棍子"},{"w":"chinois","g":"m","f":18.15,"zh":"中文；中国人"},{"w":"printemps","g":"m","f":18.13,"zh":"春天"},{"w":"colline","g":"f","f":18.11,"zh":"山丘"},{"w":"panne","g":"f","f":18.05,"zh":"故障"},{"w":"défi","g":"m","f":18.01,"zh":"挑战"},{"w":"goutte","g":"f","f":17.95,"zh":"水滴"},{"w":"division","g":"f","f":17.94,"zh":"分裂；除法"},{"w":"mercredi","g":"m","f":17.91,"zh":"星期三"},{"w":"clef","g":"f","f":17.88,"zh":"钥匙"},{"w":"difficulté","g":"f","f":17.86,"zh":"困难"},{"w":"fauteuil","g":"m","f":17.81,"zh":"扶手椅"},{"w":"prostitué","g":"m","f":17.79,"zh":"男妓"},{"w":"réception","g":"f","f":17.79,"zh":"接待；前台"},{"w":"drapeau","g":"m","f":17.76,"zh":"旗帜"},{"w":"fée","g":"f","f":17.76,"zh":"仙女"},{"w":"pneu","g":"m","f":17.75,"zh":"轮胎"},{"w":"progrès","g":"m","f":17.75,"zh":"进步"},{"w":"panneau","g":"m","f":17.68,"zh":"标牌；面板"},{"w":"chanteur","g":"m","f":17.66,"zh":"歌手"},{"w":"dégât","g":"m","f":17.65,"zh":"损坏"},{"w":"charme","g":"m","f":17.63,"zh":"魅力"},{"w":"leader","g":"m","f":17.58,"zh":"领袖"},{"w":"décès","g":"m","f":17.58,"zh":"去世"},{"w":"froid","g":"m","f":17.58,"zh":"寒冷"},{"w":"palais","g":"m","f":17.53,"zh":"宫殿"},{"w":"jeunesse","g":"f","f":17.52,"zh":"青春"},{"w":"toast","g":"m","f":17.5,"zh":"吐司"},{"w":"dehors","g":"m","f":17.45,"zh":"外面"},{"w":"caractère","g":"m","f":17.39,"zh":"性格"},{"w":"transport","g":"m","f":17.35,"zh":"运输"},{"w":"métal","g":"m","f":17.34,"zh":"金属"},{"w":"coucou","g":"m","f":17.29,"zh":"布谷鸟"},{"w":"remède","g":"m","f":17.29,"zh":"药"},{"w":"promotion","g":"f","f":17.29,"zh":"促销；晋升"},{"w":"passager","g":"m","f":17.27,"zh":"乘客"},{"w":"symbole","g":"m","f":17.27,"zh":"象征；符号"},{"w":"motif","g":"m","f":17.26,"zh":"图案；理由"},{"w":"temple","g":"m","f":17.26,"zh":"寺庙"},{"w":"bible","g":"f","f":17.24,"zh":"圣经"},{"w":"lecture","g":"f","f":17.24,"zh":"阅读"},{"w":"poudre","g":"f","f":17.24,"zh":"粉末"},{"w":"langage","g":"m","f":17.23,"zh":"语言"},{"w":"douzaine","g":"f","f":17.21,"zh":"一打"},{"w":"religion","g":"f","f":17.2,"zh":"宗教"},{"w":"satellite","g":"m","f":17.2,"zh":"卫星"},{"w":"sous-titre","g":"m","f":17.17,"zh":"字幕"},{"w":"file","g":"f","f":17.16,"zh":"队列"},{"w":"serment","g":"m","f":17.14,"zh":"誓言"},{"w":"reçu","g":"m","f":17.12,"zh":"收据"},{"w":"matinée","g":"f","f":17.1,"zh":"上午"},{"w":"phase","g":"f","f":17.09,"zh":"阶段"},{"w":"canard","g":"m","f":17.09,"zh":"鸭子"},{"w":"beurre","g":"m","f":17.07,"zh":"黄油"},{"w":"sensation","g":"f","f":17.04,"zh":"感觉"},{"w":"stratégie","g":"f","f":17.01,"zh":"策略"},{"w":"foie","g":"m","f":16.99,"zh":"肝脏"},{"w":"direct","g":"m","f":16.98,"zh":"直播"},{"w":"défaut","g":"m","f":16.98,"zh":"缺点；缺陷"},{"w":"pouls","g":"m","f":16.96,"zh":"脉搏"},{"w":"stylo","g":"m","f":16.96,"zh":"钢笔"},{"w":"commerce","g":"m","f":16.95,"zh":"商业；商店"},{"w":"collection","g":"f","f":16.94,"zh":"收藏；系列"},{"w":"formation","g":"f","f":16.86,"zh":"培训；形成"},{"w":"plainte","g":"f","f":16.86,"zh":"抱怨；投诉"},{"w":"bol","g":"m","f":16.85,"zh":"碗"},{"w":"commandement","g":"m","f":16.82,"zh":"命令；戒律"},{"w":"pouce","g":"m","f":16.77,"zh":"拇指；英寸"},{"w":"danseur","g":"m","f":16.77,"zh":"舞者"},{"w":"frigo","g":"m","f":16.77,"zh":"冰箱"},{"w":"commentaire","g":"m","f":16.75,"zh":"评论"},{"w":"ministère","g":"m","f":16.75,"zh":"部；政府部门"},{"w":"tendance","g":"f","f":16.75,"zh":"趋势；倾向"},{"w":"gentleman","g":"m","f":16.72,"zh":"绅士"},{"w":"guerrier","g":"m","f":16.7,"zh":"战士；勇士"},{"w":"pénis","g":"m","f":16.66,"zh":"阴茎"},{"w":"casino","g":"m","f":16.64,"zh":"赌场"},{"w":"régime","g":"m","f":16.64,"zh":"饮食；制度"},{"w":"gagnant","g":"m","f":16.62,"zh":"赢家；获胜者"},{"w":"bâtard","g":"m","f":16.62,"zh":"私生子；杂种"},{"w":"tube","g":"m","f":16.59,"zh":"管子；歌曲"},{"w":"commissariat","g":"m","f":16.58,"zh":"警察局"},{"w":"patrouille","g":"f","f":16.55,"zh":"巡逻队"},{"w":"maîtresse","g":"f","f":16.54,"zh":"女主人；情妇"},{"w":"petit-déjeuner","g":"m","f":16.51,"zh":"早餐"},{"w":"demi-tour","g":"m","f":16.51,"zh":"掉头；半圈"},{"w":"comté","g":"m","f":16.48,"zh":"县；伯爵领地"},{"w":"chevalier","g":"m","f":16.48,"zh":"骑士"},{"w":"panique","g":"f","f":16.46,"zh":"恐慌"},{"w":"stress","g":"m","f":16.46,"zh":"压力；紧张"}];
+
+    // ---- logique pure (sans DOM) ----
+
+    const STORE_KEY = 'verbcodex-demo-genre:v1';
+    const DAY = 86400000;
+    const SESSION_SIZE = 20;
+    // BOX_DAYS[box] = days until the noun is due again. Box 1 is due at once,
+    // so the errors of a session can be reviewed the same day.
+    const BOX_DAYS = [0, 0, 1, 3, 7];
+
+    function emptyStore() {
+      return { items: {} };
+    }
+
+    // Everything the review owes the user today, most overdue first.
+    function dueItems(store, now) {
+      return Object.values(store.items)
+        .filter(item => item.due <= now)
+        .sort((a, b) => a.due - b.due);
+    }
+
+    function nextDue(box, now) {
+      return now + (BOX_DAYS[box] || 0) * DAY;
+    }
+
+    // A wrong answer sends the noun back to box 1 — whether it was new or
+    // halfway up the boxes.
+    function recordWrong(store, noun, now) {
+      store.items[noun.w] = { w: noun.w, g: noun.g, box: 1, due: now };
+    }
+
+    // A right answer in a review moves the noun one box up; the fourth is the
+    // last, and the noun graduates out of the boxes.
+    function recordRight(store, noun, now) {
+      const item = store.items[noun.w];
+      if (!item) return { kind: 'none' };
+      if (item.box >= 4) {
+        delete store.items[noun.w];
+        return { kind: 'graduated' };
+      }
+      item.box += 1;
+      item.due = nextDue(item.box, now);
+      return { kind: 'advanced', box: item.box };
+    }
+
+    // Frequency-weighted draw without replacement: sqrt(freq) keeps the top of
+    // the bank ahead of its tail without letting it crowd out everything else.
+    function drawSession(bank, count, rand) {
+      const pool = bank.slice();
+      const drawn = [];
+      while (drawn.length < count && pool.length) {
+        let total = 0;
+        const weights = [];
+        for (const noun of pool) {
+          const weight = Math.sqrt(noun.f);
+          weights.push(weight);
+          total += weight;
+        }
+        let cursor = rand() * total;
+        let index = 0;
+        while (index < pool.length && cursor >= weights[index]) {
+          cursor -= weights[index];
+          index += 1;
+        }
+        if (index >= pool.length) index = pool.length - 1;
+        drawn.push(pool.splice(index, 1)[0]);
+      }
+      return drawn;
+    }
+
+    function loadStore(storage) {
+      if (!storage) return emptyStore();
+      try {
+        const raw = storage.getItem(STORE_KEY);
+        if (!raw) return emptyStore();
+        const data = JSON.parse(raw);
+        if (data && data.items && typeof data.items === 'object') {
+          return { items: data.items };
+        }
+      } catch (error) {
+        // A half-written or foreign value is not worth crashing the demo over.
+      }
+      return emptyStore();
+    }
+
+    function saveStore(storage, store) {
+      if (!storage) return false;
+      try {
+        storage.setItem(STORE_KEY, JSON.stringify({ v: 1, items: store.items }));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // ---- interface (DOM) ----
+
+    const app = document.getElementById('app');
+
+    // localStorage is not guaranteed (file:// in some browsers, private
+    // windows); without it the demo runs in memory and says so.
+    const storage = (() => {
+      try {
+        const probe = '__genre-demo-probe__';
+        window.localStorage.setItem(probe, '1');
+        window.localStorage.removeItem(probe);
+        return window.localStorage;
+      } catch (error) {
+        return null;
+      }
+    })();
+
+    const store = loadStore(storage);
+    const ui = { screen: 'home', menuOpen: true, session: null };
+
+    const pad = value => String(value).padStart(2, '0');
+    const article = noun => (noun.g === 'm' ? 'le' : 'la');
+
+    function dueLabel(box) {
+      const days = BOX_DAYS[box] || 0;
+      if (box <= 1) return 'maintenant';
+      return days === 1 ? 'dans 1 jour' : `dans ${days} jours`;
+    }
+
+    function reviewCount() {
+      return dueItems(store, Date.now()).length;
+    }
+
+    function homeView() {
+      return `
+        <header class="home-header">
+          <div class="greet"><span class="salut">Salut,</span><span class="who">Camille</span></div>
+          <div class="corner">
+            <span class="counter">01 / 24</span>
+            <button class="dots" data-action="toggle-menu" aria-label="Plus" aria-expanded="${ui.menuOpen}">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
+        </header>
+        ${ui.menuOpen ? `
+          <div class="menu-layer">
+            <button class="menu-backdrop" data-action="dismiss-menu" aria-label="Fermer le menu"></button>
+            <div class="menu-card">
+              <button class="menu-item" data-action="sauvegarde">Sauvegarde</button>
+              <button class="menu-item" data-action="genre">Le Genre</button>
+            </div>
+          </div>` : ''}
+        <p class="ghost-line">aimer · finir · aller</p>
+      `;
+    }
+
+    function lobbyView() {
+      const due = reviewCount();
+      return `
+        <header class="bar">
+          <button class="back" data-action="home">‹ Retour</button>
+          <span class="bar-title">Le Genre</span>
+        </header>
+        <div class="lobby">
+          <p class="lede">le / la — vingt noms par séance</p>
+          <button class="big" data-action="start">Commencer</button>
+          <button class="big ghost" data-action="review" ${due ? '' : 'disabled'}>
+            ${due ? `La Révision (${due})` : 'La Révision — rien à réviser'}
+          </button>
+          <p class="muted">Leitner : erreur → boîte 1, puis 1 / 3 / 7 jours.</p>
+          <div class="foot">
+            <button class="link" data-action="reset">Réinitialiser la démo</button>
+            <span>Noms : Lexique 4.1 — CC BY-SA 4.0</span>
+            ${storage ? '' : '<span class="warn">état non enregistré (stockage indisponible)</span>'}
+          </div>
+        </div>
+      `;
+    }
+
+    function gameView() {
+      const session = ui.session;
+      const noun = session.queue[session.index];
+      const answered = session.picked !== null;
+      const review = session.mode === 'review';
+      const total = session.queue.length;
+
+      const picks = ['m', 'f']
+        .map(gender => {
+          let className = 'pick';
+          if (answered) {
+            if (gender === noun.g) className += ' right';
+            else if (gender === session.picked) className += ' wrong';
+          }
+          return `<button class="${className}" data-action="pick" data-gender="${gender}" ${answered ? 'disabled' : ''}>${gender === 'm' ? 'le' : 'la'}</button>`;
+        })
+        .join('');
+
+      const feedback = answered
+        ? `<div class="feedback">
+             <p class="answer"><span class="art">${article(noun)}</span> <strong>${noun.w}</strong></p>
+             ${session.outcome ? `<p class="outcome">${session.outcome}</p>` : ''}
+           </div>`
+        : '<p class="feedback quiet">Touchez le ou la.</p>';
+
+      return `
+        <header class="bar">
+          <button class="back" data-action="quit">‹ Retour</button>
+          <span class="counter">${pad(session.index + 1)} / ${pad(total)}</span>
+        </header>
+        <main class="card">
+          ${review ? `<div class="card-top">
+            <span class="kind">Révision</span>
+            <span class="box-tag">Boîte ${noun.box}</span>
+          </div>` : ''}
+          <h1 class="noun">${noun.w}</h1>
+          <p class="gloss">${noun.zh || ''}</p>
+          <div class="picks">${picks}</div>
+          ${feedback}
+        </main>
+        ${answered ? `
+          <footer class="foot-bar">
+            <button class="primary" data-action="next">${session.index + 1 >= total ? 'Terminer' : 'Suivant'}</button>
+          </footer>` : ''}
+      `;
+    }
+
+    function summaryView() {
+      const session = ui.session;
+      if (!session) return lobbyView();
+      const due = reviewCount();
+
+      if (session.mode === 'practice') {
+        const wrong = session.answers.filter(answer => !answer.correct);
+        const right = session.answers.length - wrong.length;
+        const flawless = session.answers.length > 0 && wrong.length === 0;
+        return `
+          <header class="bar">
+            <button class="back" data-action="lobby">‹ Retour</button>
+            <span class="bar-title">Séance</span>
+          </header>
+          <div class="summary">
+            <p class="score">${right} / ${session.answers.length}</p>
+            ${flawless ? '<div class="stamp">✦ Sans faute ✦</div>' : ''}
+            ${wrong.length ? `
+              <ul class="misses">
+                ${wrong.map(answer => `<li><span>${answer.w}</span><span class="g">${answer.g === 'm' ? 'le' : 'la'}</span></li>`).join('')}
+              </ul>` : ''}
+            <button class="big" data-action="again">Encore</button>
+            <button class="big ghost" data-action="review" ${due ? '' : 'disabled'}>
+              ${due ? `La Révision (${due})` : 'La Révision — rien à réviser'}
+            </button>
+          </div>
+        `;
+      }
+
+      const advanced = session.results.filter(result => result.kind === 'advanced').length;
+      const graduated = session.results.filter(result => result.kind === 'graduated').length;
+      const back = session.results.filter(result => result.kind === 'back').length;
+      const parts = [advanced === 1 ? '1 avancé' : `${advanced} avancés`];
+      if (graduated) parts.push(graduated === 1 ? '1 gradué' : `${graduated} gradués`);
+      if (back) parts.push(back === 1 ? '1 renvoyé en Boîte 1' : `${back} renvoyés en Boîte 1`);
+      return `
+        <header class="bar">
+          <button class="back" data-action="lobby">‹ Retour</button>
+          <span class="bar-title">Révision</span>
+        </header>
+        <div class="summary">
+          <p class="score">${session.results.length}</p>
+          <p class="muted">${session.results.length === 1 ? 'mot revu' : 'mots revus'} · ${parts.join(' · ')}</p>
+          <button class="big" data-action="review" ${due ? '' : 'disabled'}>
+            ${due ? `Réviser encore (${due})` : 'Rien à réviser'}
+          </button>
+        </div>
+      `;
+    }
+
+    function render() {
+      app.innerHTML =
+        ui.screen === 'home' ? homeView()
+        : ui.screen === 'lobby' ? lobbyView()
+        : ui.screen === 'game' ? gameView()
+        : summaryView();
+      window.scrollTo(0, 0);
+    }
+
+    // ---- actions ----
+
+    function startPractice() {
+      ui.session = {
+        mode: 'practice',
+        queue: drawSession(NOUNS, SESSION_SIZE, Math.random),
+        index: 0,
+        picked: null,
+        outcome: '',
+        answers: [],
+      };
+      ui.screen = 'game';
+      render();
+    }
+
+    function startReview() {
+      // Snapshots, not live references: the card's "Boîte n" tag must keep
+      // saying which box the question came from after the box moves.
+      const due = dueItems(store, Date.now())
+        .slice(0, SESSION_SIZE)
+        .map(item => Object.assign({}, item));
+      if (!due.length) return;
+      ui.session = {
+        mode: 'review',
+        queue: due,
+        index: 0,
+        picked: null,
+        outcome: '',
+        results: [],
+      };
+      ui.screen = 'game';
+      render();
+    }
+
+    function answer(gender) {
+      const session = ui.session;
+      if (!session || session.picked !== null) return;
+      const noun = session.queue[session.index];
+      const now = Date.now();
+      const correct = noun.g === gender;
+      session.picked = gender;
+
+      if (session.mode === 'practice') {
+        session.answers.push({ w: noun.w, g: noun.g, correct });
+        if (correct) {
+          session.outcome = '';
+        } else {
+          recordWrong(store, noun, now);
+          session.outcome = 'entré en révision';
+        }
+      } else if (correct) {
+        const result = recordRight(store, noun, now);
+        if (result.kind === 'graduated') {
+          session.results.push({ w: noun.w, kind: 'graduated' });
+          session.outcome = 'Gradué ✓';
+        } else if (result.kind === 'advanced') {
+          session.results.push({ w: noun.w, kind: 'advanced', box: result.box });
+          session.outcome = `Boîte ${result.box} — ${dueLabel(result.box)}`;
+        }
+      } else {
+        recordWrong(store, noun, now);
+        session.results.push({ w: noun.w, kind: 'back' });
+        session.outcome = 'Boîte 1 — maintenant';
+      }
+
+      saveStore(storage, store);
+      render();
+    }
+
+    function next() {
+      const session = ui.session;
+      if (!session || session.picked === null) return;
+      if (session.index + 1 >= session.queue.length) {
+        ui.screen = 'summary';
+      } else {
+        session.index += 1;
+        session.picked = null;
+        session.outcome = '';
+      }
+      render();
+    }
+
+    app.addEventListener('click', event => {
+      const target = event.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+
+      if (action === 'toggle-menu') {
+        ui.menuOpen = !ui.menuOpen;
+        render();
+      } else if (action === 'dismiss-menu' || action === 'sauvegarde') {
+        ui.menuOpen = false;
+        render();
+      } else if (action === 'genre') {
+        ui.menuOpen = false;
+        ui.screen = 'lobby';
+        render();
+      } else if (action === 'home') {
+        ui.session = null;
+        ui.screen = 'home';
+        render();
+      } else if (action === 'lobby') {
+        ui.session = null;
+        ui.screen = 'lobby';
+        render();
+      } else if (action === 'start' || action === 'again') {
+        startPractice();
+      } else if (action === 'review') {
+        startReview();
+      } else if (action === 'pick') {
+        answer(target.dataset.gender);
+      } else if (action === 'next') {
+        next();
+      } else if (action === 'quit') {
+        ui.session = null;
+        ui.screen = 'lobby';
+        render();
+      } else if (action === 'reset') {
+        store.items = {};
+        saveStore(storage, store);
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

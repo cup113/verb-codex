@@ -2,7 +2,20 @@
 
 本文件记录变位法典的显著变更。格式参照 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
-## [Unreleased]
+## [0.6.0] - 2026-10-19
+
+名词阴阳性练习（**辨性** / `Le Genre`）先交出交互原型：单页 HTML，内置 Lexique 4.1 词频前 1000 个名词，一局 20 题，4 箱 Leitner 复习。首页两处修饰跟着这一版走：主人名整行斜体，完成记号退成更浅的棕并对齐行尾的 ›。
+
+### Added
+
+- **名词阴阳性练习原型（demo-genre.html）**：⋯ 菜单里多一项 `Le Genre` → 门厅（`Commencer` / `La Révision (N)`）→ 20 题 le/la → 交卷 → 复习。题卡上法语与中文短注一起出现，作答前就能认出词；`Suivant` 紧跟卡片，不钉在屏幕底。复习按 4 箱 Leitner（立即 / 1 / 3 / 7 天，第 4 箱答对毕业）落 localStorage；`Réinitialiser la démo` 清空。
+- **词库工具与中文标注（tools/make-nouns.py、tools/nouns-glosses.json）**：从 Lexique 4.1 导出 top-1000 le/la 名词——剔 l' 省略、复数、双性别、单字母与功能词，`coeur`/`voeu` 正字为 `cœur`/`vœu`（589 阳 / 411 阴，词频下限 16.46）；1000 条中文短注随词条分发。`python tools/make-nouns.py --glosses tools/nouns-glosses.json --js` 生成的正是 demo 内联那份。
+- **ADR 0003 与 CONTEXT 术语**：内置词库把「法典不懂法语」收窄为「不内置动词变位表」，复习箱持久化是「默写退出即焚」的首处破例；新增 **词库**、**中文短注**、**辨性**、**复习箱**、**毕业** 五个条目与六条不变量。
+
+### Changed
+
+- **主人名整行斜体**：名字从正体（`serifMedium`）改用与「Salut,」同一支斜体笔；汉字没有斜体字形，由合成倾斜补上同一角度（web 的 `font-synthesis`，Android 的 `Typeface.create(family, style)`），不再在斜体问候语旁边站成正体。
+- **完成记号退成浅棕、与 › 对齐**：`✓` 从 accent 换成稀释后的 `#D6A58E`（对卡片 2.1:1，未完成行的圆圈 1.75:1），整列记号下移 1.5、左移 1.5，让勾的墨心落在行尾 › 的中心——它是一条记录，不是一个按钮。
 
 ## [0.5.0] - 2026-10-17
 

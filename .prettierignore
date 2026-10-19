@@ -1,6 +1,9 @@
 # The reference artifact this app was ported from: keep it byte-identical.
 demo
 
+# The noun-gender prototype: hand-formatted like the demo above.
+demo-genre.html
+
 # Gradle, native and generated trees.
 android
 screenshots
