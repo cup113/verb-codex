@@ -108,8 +108,8 @@ android {
         applicationId "com.verbcodex"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "0.6.1"
+        versionCode 8
+        versionName "0.6.2"
     }
     signingConfigs {
         debug {
