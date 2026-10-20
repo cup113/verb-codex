@@ -12,7 +12,10 @@ import { VerbListScreen } from './src/screens/VerbListScreen';
 import { VerbDetailScreen } from './src/screens/VerbDetailScreen';
 import { AddVerbScreen } from './src/screens/AddVerbScreen';
 import { BackupScreen } from './src/screens/BackupScreen';
+import { GenreLobbyScreen } from './src/screens/GenreLobbyScreen';
+import { GenreDrillScreen } from './src/screens/GenreDrillScreen';
 import { requestPersistentStorage } from './src/platform/persistentStorage';
+import { genreStore } from './src/storage/genreStore';
 import type { RootStackParamList } from './src/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +36,9 @@ function App() {
   useEffect(() => {
     verbStore.init();
     ownerStore.init();
+    // The drill's ledger is a third record that must be on disk before the
+    // first question: the lobby reads the due count straight off it.
+    genreStore.init();
     // A no-op on Android, an actual request on the web: browser storage is
     // best-effort unless the origin asks otherwise.
     requestPersistentStorage();
@@ -42,6 +48,7 @@ function App() {
       if (state !== 'active') {
         verbStore.flush();
         ownerStore.flush();
+        genreStore.flush();
       }
     });
     return () => subscription.remove();
@@ -62,6 +69,8 @@ function App() {
             <Stack.Screen name="VerbList" component={VerbListScreen} />
             <Stack.Screen name="VerbDetail" component={VerbDetailScreen} />
             <Stack.Screen name="Backup" component={BackupScreen} />
+            <Stack.Screen name="Genre" component={GenreLobbyScreen} />
+            <Stack.Screen name="GenreDrill" component={GenreDrillScreen} />
             <Stack.Screen
               name="AddVerb"
               component={AddVerbScreen}

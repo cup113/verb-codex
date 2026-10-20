@@ -18,4 +18,12 @@ export type RootStackParamList = {
    */
   AddVerb: { group: Group };
   Backup: undefined;
+  /** The drill's lobby: its way back is the list it was opened from. */
+  Genre: undefined;
+  /**
+   * One sitting of the drill. `mode` is what the lobby chose, not a state the
+   * route keeps current: a sitting that ends offers "Encore" in place, and a
+   * review started from that summary never re-enters through here.
+   */
+  GenreDrill: { mode: 'practice' | 'review' };
 };

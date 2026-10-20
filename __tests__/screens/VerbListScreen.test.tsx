@@ -296,4 +296,34 @@ describe('VerbListScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('Backup');
     expect(tree.root.findByType(MoreMenu).props.visible).toBe(false);
   });
+
+  it('offers the gender drill in the same menu, under the backup', async () => {
+    const { tree, navigation } = await renderList();
+
+    ReactTestRenderer.act(() => {
+      tree.root.findByType(MoreButton).props.onPress();
+    });
+
+    // The order is the prototype's: what leaves the device, then the exercise.
+    expect(
+      tree.root.findByType(MoreMenu).props.items.map(
+        (item: { label: string }) => item.label,
+      ),
+    ).toEqual([copy.backupLink, copy.genreLink]);
+    expect(screenText(tree)).toContain(copy.genreLink);
+
+    const label = tree.root
+      .findAllByType(Text)
+      .find(node => node.props.children === copy.genreLink);
+    let pressable = label!.parent;
+    while (pressable && typeof pressable.props.onPress !== 'function') {
+      pressable = pressable.parent;
+    }
+    ReactTestRenderer.act(() => {
+      pressable!.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('Genre');
+    expect(tree.root.findByType(MoreMenu).props.visible).toBe(false);
+  });
 });

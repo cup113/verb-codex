@@ -2,6 +2,21 @@
 
 本文件记录变位法典的显著变更。格式参照 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [0.6.1] - 2026-10-20
+
+**辨性**（`Le Genre`）从原型走进 App：首页「⋯」菜单的第二项、一局 20 题、4 箱 Leitner **复习箱**落盘。词库成为 App 自带的数据，原型 `demo-genre.html` 留作设计参照。
+
+### Added
+
+- **辨性（Le Genre）进 App**：⋯ 菜单 → 门厅（`Commencer` / `La Révision (N)` / `Vider la Boîte (N)`，清空为两次点击确认）→ 20 题 le/la → 结算。题卡上法语与**中文短注**一起出现；答错入**复习箱**第 1 箱，复习答对升箱（立即 / 1 / 3 / 7 天），第 4 箱答对**毕业**；箱落 `verbcodex.genre.v1`（AsyncStorage / localStorage），一题一次立即写、切后台 flush，**不随备份移动**。左上「‹ Retour」与 Android 返回键都先回门厅。
+- **复习卡的中文短注**：箱里只记词形、阴阳性与箱号，卡片按词形从**词库**取短注——原型在复习时这一行是空的。
+- **结算只是纸面**：练习纸写对错与错词清单（全对复用法典的 `✦ Sans faute ✦` 印章），复习纸写升箱 / 毕业 / 退回的条数；不存分数、次数或历史，`Encore` 就地再抽一局。
+
+### Changed
+
+- **词库进 App**：`tools/make-nouns.py --ts` 生成 `src/data/nouns.ts`（1000 条，589 阳 / 411 阴，最小词频 16.46，与 demo 内联那份逐项相同）；生成物列进 `.prettierignore` / `.eslintignore`，`tsc` 仍按 `Noun` 类型检查它。
+- **App 装配**：`App.tsx` 启动时载入复习箱、切后台 flush；`RootStackParamList` 增 `Genre` 与 `GenreDrill` 两条路由。
+
 ## [0.6.0] - 2026-10-19
 
 名词阴阳性练习（**辨性** / `Le Genre`）先交出交互原型：单页 HTML，内置 Lexique 4.1 词频前 1000 个名词，一局 20 题，4 箱 Leitner 复习。首页两处修饰跟着这一版走：主人名整行斜体，完成记号退成更浅的棕并对齐行尾的 ›。

@@ -90,10 +90,12 @@ export function VerbListScreen({ navigation }: Props) {
     return <Screen />;
   }
 
-  // One entry today; the menu is here so the corner has somewhere to put the
-  // next one without a second trip to the layout.
+  // The corner holds what does not belong in the list: the backup, and the one
+  // exercise that does not read the codex's own entries at all. More than two
+  // would need a different shape; the menu exists so that change stays here.
   const menuItems = [
     { label: copy.backupLink, onPress: () => navigation.navigate('Backup') },
+    { label: copy.genreLink, onPress: () => navigation.navigate('Genre') },
   ];
 
   return (

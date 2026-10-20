@@ -4,6 +4,11 @@ demo
 # The noun-gender prototype: hand-formatted like the demo above.
 demo-genre.html
 
+# The app's noun bank: one noun per line as tools/make-nouns.py wrote it.
+# Regenerate that file rather than formatting it — a reformat is pure churn and
+# the next regeneration would undo it anyway.
+src/data/nouns.ts
+
 # Gradle, native and generated trees.
 android
 screenshots

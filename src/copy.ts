@@ -80,4 +80,49 @@ export const copy = {
   importProblemNewer:
     'Cette sauvegarde vient d’une version plus récente de l’application.',
   importProblemNoVerbs: 'Aucun verbe lisible dans cette sauvegarde.',
+  // The gender drill (Le Genre). Its chrome is French like the rest of the
+  // notebook, and it keeps the prototype's wording — the drill is a rehearsal
+  // of one article, not a lesson with a syllabus.
+  genreLink: 'Le Genre',
+  genreTitle: 'Le Genre',
+  genreLede: 'le / la — vingt noms par séance',
+  genreStart: 'Commencer',
+  genreReview: (due: number) => `La Révision (${due})`,
+  genreReviewEmpty: 'La Révision — rien à réviser',
+  genreLeitner: 'Leitner : erreur → boîte 1, puis 1 / 3 / 7 jours.',
+  genreCredit: 'Noms : Lexique 4.1 — CC BY-SA 4.0',
+  genrePrompt: 'Touchez le ou la.',
+  genreNext: 'Suivant',
+  genreFinish: 'Terminer',
+  /** The card's own tag in a review, and the box the question came from. */
+  genreKind: 'Révision',
+  genreBoxTag: (box: number) => `Boîte ${box}`,
+  genreSessionTitle: 'Séance',
+  genreAgain: 'Encore',
+  // A practice answer's one-line outcome: a wrong word has just joined the
+  // ledger; in a review, a right one has moved a box or graduated.
+  genreToReview: 'entré en révision',
+  genreGraduated: 'Gradué ✓',
+  genreBoxDue: (box: number, due: string) => `Boîte ${box} — ${due}`,
+  genreDueNow: 'maintenant',
+  genreDueIn: (days: number) =>
+    days === 1 ? 'dans 1 jour' : `dans ${days} jours`,
+  genreScore: (right: number, total: number) => `${right} / ${total}`,
+  genreReviewed: (count: number) =>
+    count === 1 ? '1 mot revu' : `${count} mots revus`,
+  genreAdvanced: (count: number) => `${count} avancé${count > 1 ? 's' : ''}`,
+  genreGraduatedCount: (count: number) =>
+    `${count} gradué${count > 1 ? 's' : ''}`,
+  // « renvoyé » rather than « reculé »: the wrong answer goes all the way back
+  // to the first box, not one step down.
+  genreSentBack: (count: number) =>
+    `${count} renvoyé${count > 1 ? 's' : ''} en Boîte 1`,
+  genreReviewAgain: (due: number) => `Réviser encore (${due})`,
+  genreReviewNothing: 'Rien à réviser',
+  genreEmpty: 'Rien à réviser',
+  // Clearing the ledger costs no recorded value, but it is still a two-touch
+  // question, on the same terms as deleting an entry.
+  genreReset: (count: number) => `Vider la Boîte (${count})`,
+  genreResetSure: 'Vraiment ?',
+  genreResetHint: 'Touchez encore pour vider',
 } as const;
