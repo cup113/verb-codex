@@ -63,6 +63,26 @@ function ruleColors(tree: ReactTestRenderer.ReactTestRenderer): unknown[] {
     .filter(color => color !== undefined);
 }
 
+/** The rule itself — its colour, weight and line style, as the row draws it. */
+function ruleStyle(
+  tree: ReactTestRenderer.ReactTestRenderer,
+): Record<string, unknown> {
+  const style = tree.root
+    .findAll(node => node.props.style !== undefined)
+    .map(
+      node => StyleSheet.flatten(node.props.style) as Record<string, unknown>,
+    )
+    .find(
+      candidate =>
+        candidate.borderBottomWidth !== undefined &&
+        candidate.borderStyle !== undefined,
+    );
+  if (!style) {
+    throw new Error('the row draws no rule');
+  }
+  return style;
+}
+
 describe('DictationRow', () => {
   it('waits for a word in an editable field, in the writing colour', () => {
     const { tree } = render();
@@ -99,7 +119,37 @@ describe('DictationRow', () => {
     const { tree } = render({ value: '', verdict: 'bad' });
 
     expect(fieldStyle(tree).textDecorationLine).toBeUndefined();
-    expect(ruleColors(tree)).toContain(colors.terracotta);
+    expect(ruleColors(tree)).toContain(colors.verdictWrong);
+    // With no word to strike, the heavier solid rule is the whole mark.
+    expect(ruleStyle(tree)).toMatchObject({
+      borderBottomWidth: 2,
+      borderStyle: 'solid',
+      borderBottomColor: colors.verdictWrong,
+    });
+  });
+
+  it('underlines a settled row in the verdict ink, one weight lighter', () => {
+    const { tree } = render({ value: 'aime', verdict: 'ok' });
+
+    expect(ruleStyle(tree)).toMatchObject({
+      borderBottomWidth: 1,
+      borderStyle: 'solid',
+      borderBottomColor: colors.verdictRight,
+    });
+  });
+
+  it('keeps the six-row grid still when a verdict lands', () => {
+    const settled = render({ value: 'aime', verdict: 'ok' }).tree;
+    const fault = render({ value: 'aime', verdict: 'bad' }).tree;
+
+    // What the rule adds to the row's height: padding under the text plus the
+    // border itself. A wrong row's heavier rule must be paid for in padding,
+    // or every fault would nudge the rows below it down a pixel.
+    const foot = (style: Record<string, unknown>) =>
+      Number(style.paddingBottom ?? style.paddingVertical ?? 0) +
+      Number(style.borderBottomWidth);
+
+    expect(foot(ruleStyle(fault))).toBe(foot(ruleStyle(settled)));
   });
 
   it('inks the word in, and stops editing it, once it matched', () => {
@@ -110,7 +160,12 @@ describe('DictationRow', () => {
       text: node.props.children,
       color: StyleSheet.flatten(node.props.style)?.color,
     }));
-    expect(settled).toContainEqual({ text: 'aime', color: colors.ink });
+    // Settled in the verdict ink, not the notebook's ordinary ink: a matched
+    // word has to be readable as "right" at a glance.
+    expect(settled).toContainEqual({
+      text: 'aime',
+      color: colors.verdictRight,
+    });
   });
 
   it('inks the recorded word, not the whitespace around what was typed', () => {

@@ -81,7 +81,11 @@ export function GenreCard({
               accessibilityRole="button"
               disabled={answered}
               onPress={() => onPick(candidate)}
-              style={[styles.pick, isRight && styles.pickRight]}
+              style={[
+                styles.pick,
+                isRight && styles.pickRight,
+                isWrongPick && styles.pickWrong,
+              ]}
             >
               <Text
                 style={[
@@ -107,7 +111,16 @@ export function GenreCard({
             </Text>
             {/* A right practice answer has nothing to add: it moved no box. */}
             {outcome === null ? null : (
-              <Text style={styles.outcome}>{outcomeText(outcome)}</Text>
+              <Text
+                style={[
+                  styles.outcome,
+                  outcome.kind === 'advanced' || outcome.kind === 'graduated'
+                    ? styles.outcomeRight
+                    : styles.outcomeWrong,
+                ]}
+              >
+                {outcomeText(outcome)}
+              </Text>
             )}
           </>
         ) : (
@@ -177,18 +190,23 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   pickRight: {
-    borderColor: colors.terracotta,
+    borderColor: colors.verdictRight,
+  },
+  pickWrong: {
+    borderColor: colors.verdictWrong,
   },
   pickLabel: {
     ...serif(26),
   },
   pickLabelRight: {
-    color: colors.terracotta,
+    color: colors.verdictRight,
   },
   // The article that was chosen wrongly is struck rather than removed: the
   // card keeps saying what was touched and what the answer was, side by side.
+  // It is inked in the correction pen, so the two pills differ in hue as well
+  // as in weight — a glance is enough on a phone held at arm's length.
   pickLabelWrong: {
-    color: colors.inkSecondary,
+    color: colors.verdictWrong,
     textDecorationLine: 'line-through',
   },
   feedback: {
@@ -205,10 +223,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   article: {
-    ...serif(20, { fontFamily: fonts.serifItalic, color: colors.terracotta }),
+    ...serif(20, { fontFamily: fonts.serifItalic, color: colors.verdictRight }),
   },
   outcome: {
-    ...mono(11, { color: colors.terracotta }),
+    ...mono(11),
     marginTop: 5,
+  },
+  // The result line says what the answer did to the ledger, so it wears the
+  // colour of that verdict: a box moved up or a word graduated is green, an
+  // entry into the review box or a return to box one is terracotta.
+  outcomeRight: {
+    color: colors.verdictRight,
+  },
+  outcomeWrong: {
+    color: colors.verdictWrong,
   },
 });

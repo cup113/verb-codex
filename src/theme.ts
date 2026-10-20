@@ -16,6 +16,26 @@ export const colors = {
    * (2.5:1): the tick is a pencil mark in the margin, not a badge.
    */
   terracottaSoft: '#D6A58E',
+  /**
+   * The two inks a verdict is written in. They are not a second accent: this
+   * pair never touches a button or a tab — only the places where the codex says
+   * whether a word matched. The accent is not demoted by them; it has always
+   * been the correction pen, and now it is named as one.
+   *
+   * `verdictRight` is the green added for this: 4.95:1 against the card and
+   * 4.70:1 against the paper, so a graded page is read at a glance without the
+   * warm sheet turning into a traffic light. It is the one ink that must never
+   * be reused as decoration — a green tab underline or a green button would
+   * make the verdict mean "accent", which is exactly what this change undoes.
+   *
+   * `verdictWrong` repeats the accent on purpose. The codex has always marked a
+   * fault in terracotta — the struck attempt in a dictation, the article not
+   * chosen — and a separate red would buy a fourth pigment and no clearer
+   * signal. `__tests__/theme.test.ts` holds the pair: distinct from each other,
+   * and neither folded back onto the ordinary inks.
+   */
+  verdictRight: '#2F7A4A',
+  verdictWrong: '#B95D38',
   line: '#E6DFD5',
   lineSoft: 'rgba(230, 223, 213, 0.6)',
 } as const;

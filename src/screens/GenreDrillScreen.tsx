@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     ...mono(14, { color: colors.ink }),
   },
   missArticle: {
-    ...mono(14, { color: colors.terracotta }),
+    ...mono(14, { color: colors.verdictWrong }),
   },
   again: {
     alignSelf: 'stretch',

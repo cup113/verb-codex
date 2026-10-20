@@ -28,10 +28,11 @@ type Props = {
 
 /**
  * One row of a dictation: an empty field waiting for the word, a struck-through
- * attempt once the check called it wrong, or the word inked in for good once it
- * matched. The codex marks faults the way a teacher does — the wrong word is
- * crossed out, the right one just settles into ink — and it never says which
- * letter was wrong, because the whole word is the unit it compares.
+ * attempt once the check called it wrong, or the word settled once it matched.
+ * The codex marks faults the way a teacher does — the wrong word is crossed out
+ * in the correction pen, the right one simply settles in the verdict ink — and
+ * it never says which letter was wrong, because the whole word is the unit it
+ * compares.
  */
 export function DictationRow({
   pronoun,
@@ -112,7 +113,12 @@ export function DictationRow({
         {pronoun}
       </Text>
       <Animated.View
-        style={[styles.box, wrong && styles.boxWrong, fieldStyle]}
+        style={[
+          styles.box,
+          verdict === 'ok' && styles.boxRight,
+          wrong && styles.boxWrong,
+          fieldStyle,
+        ]}
       >
         {verdict === 'ok' ? (
           <Animated.View style={[styles.settledRow, settleStyle]}>
@@ -162,10 +168,22 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     paddingVertical: 2,
   },
+  // A settled row is ruled in the verdict ink: the field's own line comes back
+  // solid, as a sentence already checked. Dashed, at this weight, it read as a
+  // grey smudge on the paper rather than as a mark.
+  boxRight: {
+    borderBottomColor: colors.verdictRight,
+    borderStyle: 'solid',
+  },
   // A wrong row keeps a visible line under it: on an empty field there is no
-  // word to cross out, and the row still has to say it is not done.
+  // word to cross out, and the row still has to say it is not done. The line is
+  // solid and twice as heavy, and the padding pays for the extra pixel, so the
+  // six-row grid never jolts when a verdict lands.
   boxWrong: {
-    borderBottomColor: colors.terracotta,
+    borderBottomWidth: 2,
+    borderStyle: 'solid',
+    paddingBottom: 1,
+    borderBottomColor: colors.verdictWrong,
   },
   input: {
     ...mono(15, { color: colors.terracotta }),
@@ -185,6 +203,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settled: {
-    ...mono(15, { color: colors.ink }),
+    ...mono(15, { color: colors.verdictRight }),
   },
 });

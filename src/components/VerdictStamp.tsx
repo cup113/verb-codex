@@ -15,8 +15,10 @@ type Props = {
 /**
  * The mark a checked paper earns, pressed on the way a rubber stamp is: it
  * arrives too big, overshoots a little, and rests tilted. A flawless paper gets
- * the whole stamp, a corrected one the smaller remark — the reward says how the
- * paper was earned, not just that it is finished.
+ * the whole stamp in the verdict ink, a corrected one the smaller remark in the
+ * correction pen — the reward says how the paper was earned, not just that it
+ * is finished. The corrected tier stays terracotta on purpose: it is the pen
+ * signing a paper it had to correct, not a fault left on it.
  */
 export function VerdictStamp({ tier, delay = 0 }: Props) {
   const press = useRef(new Animated.Value(0)).current;
@@ -80,13 +82,13 @@ export function VerdictStamp({ tier, delay = 0 }: Props) {
 const styles = StyleSheet.create({
   ringOuter: {
     borderWidth: 2,
-    borderColor: colors.terracotta,
+    borderColor: colors.verdictRight,
     borderRadius: 6,
     padding: 3,
   },
   ringInner: {
     borderWidth: 1,
-    borderColor: colors.terracotta,
+    borderColor: colors.verdictRight,
     borderRadius: 3,
     paddingHorizontal: 16,
     paddingVertical: 4,
@@ -105,7 +107,10 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   textFlawless: {
-    ...serif(19, { fontFamily: fonts.serifItalic, color: colors.terracotta }),
+    ...serif(19, {
+      fontFamily: fonts.serifItalic,
+      color: colors.verdictRight,
+    }),
   },
   textCorrected: {
     ...serif(15, { fontFamily: fonts.serifItalic, color: colors.terracotta }),

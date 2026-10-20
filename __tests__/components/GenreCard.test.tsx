@@ -56,6 +56,27 @@ function styleOf(tree: ReactTestRenderer.ReactTestRenderer, label: string) {
   return StyleSheet.flatten(node.props.style) as Record<string, unknown>;
 }
 
+/** The pill an article sits in, whose border carries the verdict. */
+function pillStyleOf(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+): Record<string, unknown> {
+  const text = tree.root
+    .findAllByType(Text)
+    .find(node => node.props.children === label);
+  if (!text) {
+    throw new Error(`no article ${label}`);
+  }
+  let node = text.parent;
+  while (node && typeof node.props.onPress !== 'function') {
+    node = node.parent;
+  }
+  if (!node) {
+    throw new Error(`article ${label} has no pressable above it`);
+  }
+  return StyleSheet.flatten(node.props.style) as Record<string, unknown>;
+}
+
 /** Press whatever the article sits in, as a touch would. */
 function pressArticle(tree: ReactTestRenderer.ReactTestRenderer, label: string) {
   const text = tree.root
@@ -117,8 +138,34 @@ describe('GenreCard', () => {
   it('strikes the article that was wrong and inks the right one', () => {
     const { tree } = render({ picked: 'f' });
 
-    expect(styleOf(tree, 'la').textDecorationLine).toBe('line-through');
-    expect(styleOf(tree, 'le').color).toBe(colors.terracotta);
+    // The chosen article is struck in the correction pen, the right one is
+    // written in the verdict ink: hue and weight together, not only a strike.
+    expect(styleOf(tree, 'la')).toMatchObject({
+      color: colors.verdictWrong,
+      textDecorationLine: 'line-through',
+    });
+    expect(styleOf(tree, 'le').color).toBe(colors.verdictRight);
+  });
+
+  it('draws the two pills in the verdict each article earned', () => {
+    const { tree } = render({ picked: 'f' });
+
+    expect(pillStyleOf(tree, 'la').borderColor).toBe(colors.verdictWrong);
+    expect(pillStyleOf(tree, 'le').borderColor).toBe(colors.verdictRight);
+  });
+
+  it('writes a result line in the verdict ink it reports', () => {
+    const moved = render({ picked: 'm', outcome: advanced(2) });
+    expect(
+      styleOf(moved.tree, copy.genreBoxDue(2, copy.genreDueIn(1))).color,
+    ).toBe(colors.verdictRight);
+
+    const sentBack = render({ picked: 'f', outcome: { kind: 'sentBack' } });
+    const sentBackLine = styleOf(
+      sentBack.tree,
+      copy.genreBoxDue(1, copy.genreDueNow),
+    );
+    expect(sentBackLine.color).toBe(colors.verdictWrong);
   });
 
   it('marks a review question with its box', () => {
