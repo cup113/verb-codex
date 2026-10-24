@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
@@ -21,7 +21,10 @@ import type { Mode, Paper, Sitting } from '../domain/sitting';
 import { NOUNS } from '../data/nouns';
 import type { RootStackParamList } from '../navigation';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'GenreDrill'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'GenreDrill'> & {
+  /** The clock, injected for the reason `draw` gives below. */
+  now?: () => number;
+};
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -30,12 +33,12 @@ const pad = (value: number) => String(value).padStart(2, '0');
  * rules a sitting keeps live in one place (`domain/sitting.ts`): the bank, the
  * ledger, the clock and the random stream.
  */
-function draw(mode: Mode, ledger: ReviewState): Sitting {
+function draw(mode: Mode, ledger: ReviewState, at: number): Sitting {
   return startSitting({
     mode,
     ledger,
     bank: NOUNS,
-    now: Date.now(),
+    now: at,
     rand: Math.random,
   });
 }
@@ -51,19 +54,26 @@ function draw(mode: Mode, ledger: ReviewState): Sitting {
  * a record: no score is kept anywhere, and "Encore" simply draws another
  * sitting.
  */
-export function GenreDrillScreen({ route, navigation }: Props) {
+export function GenreDrillScreen({ route, navigation, now = Date.now }: Props) {
   const { review, ready } = useGenreState();
   const [sitting, setSitting] = useState<Sitting | null>(null);
   const mode = route.params.mode;
+  /**
+   * What the boxes owe when the paper appears, counted off the clock once per
+   * ledger — the same rule the lobby keeps, for the same reason: a render is a
+   * function of its inputs, and each answer that lands hands in a new ledger,
+   * so the last one is read at the moment the last answer was written.
+   */
+  const due = useMemo(() => reviewCount(review, now()), [review, now]);
 
   // Built once, after the ledger is readable: a review queue cannot be drawn
   // from a box that has not loaded, and rebuilding it on every answer would
   // renumber the sitting under the question being asked.
   useEffect(() => {
     if (ready && sitting === null) {
-      setSitting(draw(mode, review));
+      setSitting(draw(mode, review, now()));
     }
-  }, [mode, ready, review, sitting]);
+  }, [mode, ready, review, sitting, now]);
 
   if (!ready || sitting === null) {
     return <Screen />;
@@ -83,7 +93,7 @@ export function GenreDrillScreen({ route, navigation }: Props) {
   const title = (text: string) =>
     bar(<Text style={styles.barTitle}>{text}</Text>);
 
-  const start = (nextMode: Mode) => setSitting(draw(nextMode, review));
+  const start = (nextMode: Mode) => setSitting(draw(nextMode, review, now()));
 
   if (sitting.questions.length === 0) {
     // Reachable by a stale link or a hand-assembled route; the lobby already
@@ -102,7 +112,6 @@ export function GenreDrillScreen({ route, navigation }: Props) {
 
   if (sitting.finished) {
     const paper = paperOf(sitting);
-    const due = reviewCount(review, Date.now());
     return (
       <Screen>
         {title(
@@ -136,7 +145,7 @@ export function GenreDrillScreen({ route, navigation }: Props) {
   const last = sitting.index + 1 >= sitting.questions.length;
 
   const answer = (gender: Gender) => {
-    const step = answerSitting(sitting, gender, review, Date.now());
+    const step = answerSitting(sitting, gender, review, now());
     // A refused answer hands the same ledger back — the question is already
     // locked, so there is nothing new to write down.
     if (step.ledger !== review) {

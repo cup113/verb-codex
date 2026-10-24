@@ -36,8 +36,15 @@ function ledgerOf(held: readonly { w: string; g: 'm' | 'f' }[]): ReviewState {
   );
 }
 
-/** Render the lobby with `held` words already in the ledger (due at once). */
-async function renderLobby(held: readonly { w: string; g: 'm' | 'f' }[] = []) {
+/**
+ * Render the lobby with `held` words already in the ledger (due at once), and
+ * with the clock it should count them against — the real one unless a test says
+ * otherwise.
+ */
+async function renderLobby(
+  held: readonly { w: string; g: 'm' | 'f' }[] = [],
+  now?: () => number,
+) {
   // The ledger is the app singleton, so what the lobby reads is what was
   // actually written in this test.
   await ReactTestRenderer.act(async () => {
@@ -56,6 +63,7 @@ async function renderLobby(held: readonly { w: string; g: 'm' | 'f' }[] = []) {
         <GenreLobbyScreen
           navigation={navigation}
           route={{ key: 'Genre-1', name: 'Genre' } as ScreenProps['route']}
+          now={now}
         />
       </SafeAreaProvider>,
     );
@@ -149,6 +157,20 @@ describe('GenreLobbyScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('GenreDrill', {
       mode: 'review',
     });
+  });
+
+  it('counts against the clock it is given, not the wall clock', async () => {
+    // The word joined a box a moment ago, so it is due — but not at an instant
+    // before that. A screen that reads the clock itself cannot be told this and
+    // would count it anyway; this is what makes the count a function of the
+    // screen's inputs.
+    const { tree } = await renderLobby(
+      [{ w: 'vie', g: 'f' }],
+      () => Date.now() - 60_000,
+    );
+
+    expect(labels(tree)).toEqual([copy.genreStart, copy.genreReviewEmpty]);
+    expect(disabledOf(tree, copy.genreReviewEmpty)).toBe(true);
   });
 
   it('asks twice before it empties the ledger', async () => {

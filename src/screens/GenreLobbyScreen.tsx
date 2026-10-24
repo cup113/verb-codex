@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
@@ -9,7 +10,14 @@ import { genreStore, useGenreState } from '../storage/genreStore';
 import { boxCount, reviewCount } from '../domain/genre';
 import type { RootStackParamList } from '../navigation';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Genre'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Genre'> & {
+  /**
+   * The clock, injected. `sitting.ts` already takes one as a parameter; a screen
+   * that reaches for the ambient one cannot be told what time it is, so the
+   * count it shows is not a function of its inputs.
+   */
+  now?: () => number;
+};
 
 /**
  * The drill's lobby: the two ways in, and what the ledger currently owes.
@@ -19,17 +27,27 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Genre'>;
  * back label and the hardware back button then agree on both platforms without
  * a single handler.
  */
-export function GenreLobbyScreen({ navigation }: Props) {
+export function GenreLobbyScreen({ navigation, now = Date.now }: Props) {
   const { review, ready } = useGenreState();
   // Emptying the box is a destructive question asked in place, in the same two
   // touches and the same length as the entry screen's delete.
   const reset = useArmedConfirm(() => genreStore.clear());
+  /**
+   * What the boxes owe, read off the clock once per ledger — not once per
+   * render, and not once per mount.
+   *
+   * Per render would let two renders of the same ledger disagree. Per mount
+   * would be worse: this screen stays mounted behind a sitting, so a word that
+   * went into a box while it was away is due at once, and a frozen clock would
+   * never count it. Tying the read to the ledger's identity says what is meant
+   * — the count is a fact about this ledger.
+   */
+  const due = useMemo(() => reviewCount(review, now()), [review, now]);
 
   if (!ready) {
     return <Screen />;
   }
 
-  const due = reviewCount(review, Date.now());
   const held = boxCount(review);
 
   return (

@@ -41,7 +41,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：294 个用例，覆盖领域逻辑（含备份信封与还原时的名字取舍、主人名、旧数据迁移、默写判定、卡片上自测与默写的转移、辨性的 4 箱 Leitner 与抽题、一局的锁定与结算纸、拖动自动滚动的算式与搜索的折叠/匹配）、
+npm test               # jest：297 个用例，覆盖领域逻辑（含备份信封与还原时的名字取舍、主人名、旧数据迁移、默写判定、卡片上自测与默写的转移、代词省音、辨性的 4 箱 Leitner 与抽题、一局的锁定与结算纸、拖动自动滚动的算式与搜索的折叠/匹配）、
                        #        存储（含主人名与复习箱）、组件（变位行、默写行、列表行、搜索框、⋯ 菜单、辨性题卡）、列表页、详情页（含自测与默写）、
                        #        备份页（导出 / 粘贴导入 / 从文件导入）、辨性两屏（门厅 / 一局）与 App 装配
 npm run typecheck      # tsc --noEmit
@@ -52,7 +52,7 @@ npm run lint
 
 ```
 App.tsx                     导航装配（native-stack）+ 启动时载入法典、切后台时落盘
-src/types.ts                领域类型、六行代词、分组标签、代词省音
+src/types.ts                领域类型、行数、分组与三张标签表（没有行为）
 src/domain/verbs.ts         纯逻辑：建条目、改行、进度、容错读盘（可单测，无原生依赖）
 src/domain/search.ts        纯逻辑：折叠（忽略大小写与重音）、匹配、命中提示、过滤（可单测，无原生依赖）
 src/domain/backup.ts        备份信封与**整本法典**的值：序列化、文件名（与内容同一个时刻）、容错解析、还原时名字与条目的取舍（纯逻辑，可单测）
@@ -60,6 +60,7 @@ src/domain/dictation.ts     纯逻辑：默写判定（trim 后逐字比对、�
 src/domain/exercise.ts      纯逻辑：卡片上**自测 / 默写**的值——揭晓、逐字键入、判定落地、首判全对、盖戳后不可再写；判卷本身仍归 dictation.ts（可单测，无原生依赖）
 src/domain/genre.ts         纯逻辑：辨性的抽题（√词频、无放回）与 4 箱 Leitner、复习箱的容错读盘（可单测，无原生依赖）
 src/domain/sitting.ts       纯逻辑：**一局**的值与规则——抽题（词库 / 到期）、作答锁定、逐题推进、结算纸；箱的算术仍归 genre.ts，时钟与随机流走参数（可单测，无原生依赖）
+src/domain/pronouns.ts      纯逻辑：六行代词表与法语省音启发式——后者是法典唯一一条法语行为，且只影响显示（可单测，无原生依赖）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/storage/ownerStore.ts   **主人**名字的存储：一个键、立即落盘、不防抖（名字不是一个字一个字值得等的输入）
