@@ -5,6 +5,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import { ConjugationRowView } from '../../src/components/ConjugationRowView';
 import { DictationRow } from '../../src/components/DictationRow';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
+import { ARMED_MS } from '../../src/components/useArmedConfirm';
 import { VerdictStamp } from '../../src/components/VerdictStamp';
 import { copy } from '../../src/copy';
 import { seedVerbs } from '../../src/data/seed';
@@ -481,7 +482,7 @@ describe('VerbDetailScreen: the corner', () => {
       expect(texts(tree)).toContain(copy.deleteSure);
 
       await ReactTestRenderer.act(async () => {
-        jest.advanceTimersByTime(3000);
+        jest.advanceTimersByTime(ARMED_MS);
       });
 
       // Back to the idle word, and nothing was deleted: a question the user

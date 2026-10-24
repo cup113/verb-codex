@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { OutlinedButton } from '../components/OutlinedButton';
+import { useArmedConfirm } from '../components/useArmedConfirm';
 import { copy } from '../copy';
 import { colors, fonts, serif } from '../theme';
 import { genreStore, useGenreState } from '../storage/genreStore';
@@ -10,13 +10,6 @@ import { boxCount, reviewCount } from '../domain/genre';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Genre'>;
-
-/**
- * How long the foot stays armed after the first touch on « Vider la Boîte ».
- * The same question, in the same length, as the entry screen's delete: long
- * enough to answer, short enough that a stray touch leaves nothing live.
- */
-const RESET_ARMED_MS = 3000;
 
 /**
  * The drill's lobby: the two ways in, and what the ledger currently owes.
@@ -28,17 +21,9 @@ const RESET_ARMED_MS = 3000;
  */
 export function GenreLobbyScreen({ navigation }: Props) {
   const { review, ready } = useGenreState();
-  const [resetArmed, setResetArmed] = useState(false);
-  const armedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (armedTimer.current !== null) {
-        clearTimeout(armedTimer.current);
-        armedTimer.current = null;
-      }
-    };
-  }, []);
+  // Emptying the box is a destructive question asked in place, in the same two
+  // touches and the same length as the entry screen's delete.
+  const reset = useArmedConfirm(() => genreStore.clear());
 
   if (!ready) {
     return <Screen />;
@@ -46,23 +31,6 @@ export function GenreLobbyScreen({ navigation }: Props) {
 
   const due = reviewCount(review, Date.now());
   const held = boxCount(review);
-
-  const armReset = () => {
-    if (resetArmed) {
-      if (armedTimer.current !== null) {
-        clearTimeout(armedTimer.current);
-        armedTimer.current = null;
-      }
-      setResetArmed(false);
-      genreStore.clear();
-      return;
-    }
-    setResetArmed(true);
-    armedTimer.current = setTimeout(() => {
-      setResetArmed(false);
-      armedTimer.current = null;
-    }, RESET_ARMED_MS);
-  };
 
   return (
     <Screen>
@@ -72,9 +40,7 @@ export function GenreLobbyScreen({ navigation }: Props) {
           onPress={() => navigation.goBack()}
           hitSlop={10}
         >
-          <Text style={styles.back}>
-            {copy.backTo(copy.backFallback)}
-          </Text>
+          <Text style={styles.back}>{copy.backTo(copy.backFallback)}</Text>
         </Pressable>
         <Text style={styles.barTitle}>{copy.genreTitle}</Text>
       </View>
@@ -82,7 +48,9 @@ export function GenreLobbyScreen({ navigation }: Props) {
         <Text style={styles.lede}>{copy.genreLede}</Text>
         <OutlinedButton
           label={copy.genreStart}
-          onPress={() => navigation.navigate('GenreDrill', { mode: 'practice' })}
+          onPress={() =>
+            navigation.navigate('GenreDrill', { mode: 'practice' })
+          }
         />
         <OutlinedButton
           // The count is what the ledger owes right now; with an empty box the
@@ -98,13 +66,13 @@ export function GenreLobbyScreen({ navigation }: Props) {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
-              resetArmed ? copy.genreResetHint : copy.genreReset(held)
+              reset.armed ? copy.genreResetHint : copy.genreReset(held)
             }
-            onPress={armReset}
+            onPress={reset.press}
             hitSlop={8}
           >
-            <Text style={[styles.link, resetArmed && styles.linkArmed]}>
-              {resetArmed ? copy.genreResetSure : copy.genreReset(held)}
+            <Text style={[styles.link, reset.armed && styles.linkArmed]}>
+              {reset.armed ? copy.genreResetSure : copy.genreReset(held)}
             </Text>
           </Pressable>
         )}

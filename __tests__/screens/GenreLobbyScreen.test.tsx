@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ReactTestRenderer from 'react-test-renderer';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
+import { ARMED_MS } from '../../src/components/useArmedConfirm';
 import { GenreLobbyScreen } from '../../src/screens/GenreLobbyScreen';
 import { copy } from '../../src/copy';
 import { emptyReview, recordWrong } from '../../src/domain/genre';
@@ -163,6 +164,28 @@ describe('GenreLobbyScreen', () => {
 
     expect(genreStore.getSnapshot().review.items).toEqual({});
     expect(texts(tree)).not.toContain(copy.genreReset(1));
+  });
+
+  it('drops a question that was never answered', async () => {
+    const { tree } = await renderLobby([{ w: 'vie', g: 'f' }]);
+    // Mounted on real timers, so only the countdown is faked.
+    jest.useFakeTimers();
+    try {
+      await pressText(tree, copy.genreReset(1));
+      expect(texts(tree)).toContain(copy.genreResetSure);
+
+      await ReactTestRenderer.act(async () => {
+        jest.advanceTimersByTime(ARMED_MS);
+      });
+
+      // Back to the idle word, and the box still holds the word: a question the
+      // user never answered empties nothing.
+      expect(texts(tree)).toContain(copy.genreReset(1));
+      expect(texts(tree)).not.toContain(copy.genreResetSure);
+      expect(genreStore.getSnapshot().review.items.vie).toBeDefined();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('leaves the drill with the list behind it', async () => {

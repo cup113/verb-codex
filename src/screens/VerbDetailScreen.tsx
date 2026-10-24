@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -16,6 +16,7 @@ import { ConjugationRowView } from '../components/ConjugationRowView';
 import { DictationRow } from '../components/DictationRow';
 import { VerdictStamp } from '../components/VerdictStamp';
 import { OutlinedButton } from '../components/OutlinedButton';
+import { useArmedConfirm } from '../components/useArmedConfirm';
 import { useBlurFocusedInputOnKeyboardHide } from '../platform/blurOnKeyboardHide';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
@@ -48,13 +49,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'VerbDetail'>;
 const SETTLE_STAGGER_MS = 90;
 const STAMP_LAG_MS = 200;
 
-/**
- * How long the corner stays armed after the first touch on « Supprimer »: long
- * enough to read the question and answer it, short enough that a stray touch
- * never leaves a live delete sitting under the thumb.
- */
-const DELETE_ARMED_MS = 3000;
-
 export function VerbDetailScreen({ route, navigation }: Props) {
   const { verbs } = useVerbState();
   const verb = verbs.find(item => item.id === route.params.verbId);
@@ -66,24 +60,29 @@ export function VerbDetailScreen({ route, navigation }: Props) {
    */
   const [exercise, setExercise] = useState<Exercise | null>(null);
   /**
-   * The corner's two pending questions: a delete waiting for its second touch,
-   * and the group the entry is being moved to. Only one is ever live at once.
+   * The corner's second question: the group the entry is being moved to. Only
+   * one question is ever live at once — arming the delete folds this away, and
+   * opening this disarms the delete.
    */
-  const [deleteArmed, setDeleteArmed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const armedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * The corner's first question, asked in place and withdrawn on its own: two
+   * touches, no dialog. The entry it deletes is the one this screen was opened
+   * for, so the callback names the route's id rather than looking the entry up
+   * again — and it can be declared before the entry is known to exist.
+   */
+  const {
+    armed: deleteArmed,
+    press: pressDelete,
+    disarm: disarmDelete,
+  } = useArmedConfirm(
+    () => {
+      // Leaving the entry that no longer exists would show an empty screen.
+      verbStore.removeVerb(route.params.verbId).then(navigation.goBack);
+    },
+    { onArm: () => setPickerOpen(false) },
+  );
   useBlurFocusedInputOnKeyboardHide();
-
-  // The armed corner must not outlive the screen: a timer still running would
-  // fire a state update on a card that is already gone.
-  useEffect(() => {
-    return () => {
-      if (armedTimer.current !== null) {
-        clearTimeout(armedTimer.current);
-        armedTimer.current = null;
-      }
-    };
-  }, []);
 
   // Every exercise is left through here: dropping the value drops the attempt
   // with it, so leaving the card and coming back starts a fresh paper. The
@@ -106,18 +105,14 @@ export function VerbDetailScreen({ route, navigation }: Props) {
         }
         if (pickerOpen || deleteArmed) {
           setPickerOpen(false);
-          setDeleteArmed(false);
-          if (armedTimer.current !== null) {
-            clearTimeout(armedTimer.current);
-            armedTimer.current = null;
-          }
+          disarmDelete();
           return true;
         }
         return false;
       },
     );
     return () => subscription.remove();
-  }, [exercise, pickerOpen, deleteArmed]);
+  }, [exercise, pickerOpen, deleteArmed, disarmDelete]);
 
   // The way back names the group the list behind is standing in — the group it
   // was opened from, not necessarily the one the entry stands in now: an entry
@@ -143,41 +138,9 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     return <Screen>{back}</Screen>;
   }
 
-  /** Stops the countdown without touching what the corner is showing. */
-  const clearArmed = () => {
-    if (armedTimer.current !== null) {
-      clearTimeout(armedTimer.current);
-      armedTimer.current = null;
-    }
-  };
-
-  /**
-   * Two touches, no dialog: the corner asks its question in place, on the paper
-   * the entry is written on, rather than in a box laid over it. The first touch
-   * arms the button, the second one does the deed, and the timer disarms a
-   * question that was never answered.
-   */
-  const pressDelete = () => {
-    if (!deleteArmed) {
-      // One question at a time in the corner.
-      setPickerOpen(false);
-      setDeleteArmed(true);
-      clearArmed();
-      armedTimer.current = setTimeout(() => {
-        armedTimer.current = null;
-        setDeleteArmed(false);
-      }, DELETE_ARMED_MS);
-      return;
-    }
-    clearArmed();
-    // Leaving the entry that no longer exists would show an empty screen.
-    verbStore.removeVerb(verb.id).then(navigation.goBack);
-  };
-
   const togglePicker = () => {
     // The picker and an armed delete are two questions under one thumb.
-    clearArmed();
-    setDeleteArmed(false);
+    disarmDelete();
     setPickerOpen(open => !open);
   };
 
