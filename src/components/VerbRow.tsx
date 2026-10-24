@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ROW_COUNT, Verb } from '../types';
+import { PICK_UP_HOLD_MS } from './pickUpHold';
 import { filledCount, isComplete } from '../domain/verbs';
 import { copy } from '../copy';
 import { cardSurface, colors, mono, serif } from '../theme';
@@ -39,7 +40,7 @@ export function VerbRow({
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      delayLongPress={400}
+      delayLongPress={PICK_UP_HOLD_MS}
       // The six rows are shown as a mark, not as text, so the count they stand
       // for has to be said out loud here or it would be lost to a reader.
       accessibilityLabel={`${verb.infinitive}, ${copy.rowsRecorded(
@@ -67,7 +68,11 @@ export function VerbRow({
           diluted to a lighter brown — a mark is a record the paper holds, not a
           call to action. */}
       <View style={styles.mark}>
-        {complete ? <View style={styles.tick} /> : <View style={styles.openRow} />}
+        {complete ? (
+          <View style={styles.tick} />
+        ) : (
+          <View style={styles.openRow} />
+        )}
       </View>
       <Text style={styles.chevron}>›</Text>
     </Pressable>

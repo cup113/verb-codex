@@ -6,22 +6,10 @@ import type {
 } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { VerbRow } from './VerbRow';
+import { PICK_UP_HOLD_MS } from './pickUpHold';
 import { insertionIndex } from '../domain/verbs';
 import { colors } from '../theme';
 import type { VerbListProps } from './VerbList';
-
-/**
- * How long a row must be held before it can be dragged.
- *
- * The native list reorders on a long press, and the browser needs the same gate
- * for the same reason: a tap and a drag begin with the same gesture on the same
- * target, and a browser starts an HTML5 drag after a couple of pixels of
- * movement. A row that was draggable from the start therefore swallows the tap
- * that opens an entry (measured: 2px of wobble, no navigation). Arming the drag
- * only after a deliberate hold keeps tap-to-open intact and makes an accidental
- * reorder — a 2px nudge that lands between two rows — impossible.
- */
-const HOLD_MS = 400;
 
 /** Movement that cancels a pending hold: this was a tap, or a wobble. */
 const HOLD_SLOP = 10;
@@ -127,7 +115,7 @@ export function VerbList({
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
       setArmedId(verbId);
-    }, HOLD_MS);
+    }, PICK_UP_HOLD_MS);
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -149,7 +137,10 @@ export function VerbList({
     return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
   };
 
-  const handleDragStart = (event: DragEvent<HTMLDivElement>, verbId: string) => {
+  const handleDragStart = (
+    event: DragEvent<HTMLDivElement>,
+    verbId: string,
+  ) => {
     // Firefox refuses to start a drag unless some data is set on it.
     event.dataTransfer.setData('text/plain', verbId);
     event.dataTransfer.effectAllowed = 'move';
@@ -198,7 +189,8 @@ export function VerbList({
         // `top of row i` and `bottom of row i-1` are the same slot, so the gap
         // is painted once: above its row, except below the last one.
         const markAbove = dropSlot === index;
-        const markBelow = dropSlot === verbs.length && index === verbs.length - 1;
+        const markBelow =
+          dropSlot === verbs.length && index === verbs.length - 1;
         const wrapper: CSSProperties = {
           ...DRAG_SOURCE,
           opacity: isDragging ? 0.35 : 1,
@@ -207,13 +199,14 @@ export function VerbList({
           boxShadow: markAbove
             ? dropLine('top')
             : markBelow
-              ? dropLine('bottom')
-              : undefined,
+            ? dropLine('bottom')
+            : undefined,
         };
         return (
           <div
-            // Armed by the hold, not by the row being a row: see HOLD_MS. And
-            // never while the list is a filtered subset: see reorderEnabled.
+            // Armed by the hold, not by the row being a row: see
+            // PICK_UP_HOLD_MS. And never while the list is a filtered subset:
+            // see reorderEnabled.
             draggable={isArmed && reorderEnabled}
             onPointerDown={event => handlePointerDown(event, item.id)}
             onPointerMove={handlePointerMove}

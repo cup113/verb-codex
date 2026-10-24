@@ -12,6 +12,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { VerbRow } from './VerbRow';
+import { PICK_UP_HOLD_MS } from './pickUpHold';
 import { autoScrollStep } from './verbListAutoScroll';
 import type { Verb } from '../types';
 
@@ -36,20 +37,6 @@ export type VerbListProps = {
   /** Ordering is the native affordance; the web twin accepts and ignores it. */
   onReorder: (verbId: string, toIndex: number) => void;
 };
-
-/**
- * How long a row must be held before it can be picked up.
- *
- * The pick-up is a `Gesture.Pan` created with `activateAfterLongPress`, which
- * gesture-handler enforces in its own native handler (`PanGestureHandler`'s
- * `shouldFail()`): a finger that travels past the platform's touch slop before
- * the hold elapses fails the gesture outright, so a swipe scrolls the list and
- * never picks a row up. That is why the pick-up is not a
- * `Pressable.onLongPress`: React Native cancels that timer only from the JS
- * touch-move events it receives, and under a scrolling list they are not
- * guaranteed to arrive.
- */
-const HOLD_MS = 400;
 
 /** How the held row settles into its slot before the reorder is written. */
 const SPRING = {
@@ -117,11 +104,19 @@ type DraggableRowProps = {
 /**
  * One row, plus the gesture that picks it up and carries it.
  *
- * A single gesture does both jobs. While it waits out `HOLD_MS` the native
- * scroll view still owns the touch, so the list scrolls; once the hold matures
- * this handler is ACTIVE and tracks the finger itself. Nothing else competes
- * for the pointer, so there is no arbitration to lose and no drag state a
- * cancelled gesture can strand — `onFinalize` always runs.
+ * A single gesture does both jobs. While it waits out `PICK_UP_HOLD_MS` the
+ * native scroll view still owns the touch, so the list scrolls; once the hold
+ * matures this handler is ACTIVE and tracks the finger itself. Nothing else
+ * competes for the pointer, so there is no arbitration to lose and no drag
+ * state a cancelled gesture can strand — `onFinalize` always runs.
+ *
+ * The hold is enforced by gesture-handler in its own native handler
+ * (`PanGestureHandler`'s `shouldFail()`): a finger that travels past the
+ * platform's touch slop before the hold elapses fails the gesture outright, so
+ * a swipe scrolls the list and never picks a row up. That is why the pick-up is
+ * not a `Pressable.onLongPress`: React Native cancels that timer only from the
+ * JS touch-move events it receives, and under a scrolling list they are not
+ * guaranteed to arrive.
  */
 function DraggableRow({
   verb,
@@ -155,7 +150,7 @@ function DraggableRow({
     () =>
       Gesture.Pan()
         .enabled(reorderEnabled)
-        .activateAfterLongPress(HOLD_MS)
+        .activateAfterLongPress(PICK_UP_HOLD_MS)
         .onStart(() => {
           settling.value = false;
           owner.value = rowIndex;

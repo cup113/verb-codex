@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { VerbRow } from '../../src/components/VerbRow';
+import { PICK_UP_HOLD_MS } from '../../src/components/pickUpHold';
 import { emptyRows } from '../../src/domain/verbs';
 import { colors } from '../../src/theme';
 import { Verb } from '../../src/types';
@@ -75,12 +76,24 @@ describe('VerbRow', () => {
     // Read off whichever node carries it: `Pressable` is memo-wrapped, so it
     // has no type a test can match — the prop itself is the stable handle.
     const label = (tree: ReactTestRenderer.ReactTestRenderer): string =>
-      tree.root.findAll(
-        node => node.props?.accessibilityLabel !== undefined,
-      )[0].props.accessibilityLabel;
+      tree.root.findAll(node => node.props?.accessibilityLabel !== undefined)[0]
+        .props.accessibilityLabel;
 
     expect(label(render(SIX))).toBe('aimer, 6 lignes sur 6');
     expect(label(render(['aime', 'aimes']))).toBe('aimer, 2 lignes sur 6');
+  });
+
+  it('waits the same hold as the list that picks the row up', () => {
+    // The row's long press does nothing on purpose: it is there to swallow the
+    // release that would open the entry after a pick-up. That only works if it
+    // fires no earlier and no later than the list's own hold, so the number is
+    // read from the one module that states it — a literal here would go stale
+    // silently, and this assertion is what would catch it.
+    const delay = (tree: ReactTestRenderer.ReactTestRenderer): number =>
+      tree.root.findAll(node => node.props?.delayLongPress !== undefined)[0]
+        .props.delayLongPress;
+
+    expect(delay(render(SIX))).toBe(PICK_UP_HOLD_MS);
   });
 
   it('draws the mark in the diluted accent rather than the accent itself', () => {
