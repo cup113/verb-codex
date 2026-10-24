@@ -1,13 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
-import {
-  emptyReview,
-  parseReview,
-  recordRight as advanceBox,
-  recordWrong as backToBoxOne,
-  serializeReview,
-} from '../domain/genre';
-import type { Gender, ReviewState, RightOutcome } from '../domain/genre';
+import { emptyReview, parseReview, serializeReview } from '../domain/genre';
+import type { ReviewState } from '../domain/genre';
 
 export const GENRE_KEY = 'verbcodex.genre.v1';
 
@@ -27,13 +21,18 @@ export type GenreStore = {
   getSnapshot(): GenreState;
   init(): Promise<void>;
   flush(): Promise<void>;
-  recordWrong(noun: { w: string; g: Gender }): void;
-  recordRight(noun: { w: string; g: Gender }): RightOutcome;
+  /** Keep a ledger the sitting has already worked out; one answer, one write. */
+  apply(review: ReviewState): void;
   clear(): void;
 };
 
 /**
  * The review box: the codex's own ledger of which nouns the drill owes back.
+ *
+ * It keeps the boxes and nothing else — what an answer *did* to them is the
+ * sitting's business (`domain/sitting.ts`), which hands the result here to be
+ * written down. So this store reads no clock and applies no rule: it is a
+ * record, like the codex's other ones.
  *
  * Unlike a recorded value it is written the moment it changes rather than
  * debounced — one answer is one fact, there is nothing to coalesce, and a
@@ -44,11 +43,7 @@ export type GenreStore = {
  * The key is the app's own, not the prototype's (`verbcodex-demo-genre:v1`):
  * the demo's localStorage is a rehearsal, not something to inherit.
  */
-export function createGenreStore(
-  storage: GenreStorage,
-  options: { now?: () => number } = {},
-): GenreStore {
-  const now = options.now ?? Date.now;
+export function createGenreStore(storage: GenreStorage): GenreStore {
   let review: ReviewState = emptyReview();
   let ready = false;
   let snapshot: GenreState = { review, ready };
@@ -77,24 +72,19 @@ export function createGenreStore(
     publish();
   }
 
-  function recordWrong(noun: { w: string; g: Gender }): void {
-    review = backToBoxOne(review, noun, now());
+  function apply(next: ReviewState): void {
+    // The very same ledger is not a change: a refused answer hands it back
+    // untouched, and nothing should reach the disk for it.
+    if (next === review) {
+      return;
+    }
+    review = next;
     publish();
     write();
-  }
-
-  function recordRight(noun: { w: string; g: Gender }): RightOutcome {
-    const written = advanceBox(review, noun, now());
-    review = written.state;
-    publish();
-    write();
-    return written.outcome;
   }
 
   function clear(): void {
-    review = emptyReview();
-    publish();
-    write();
+    apply(emptyReview());
   }
 
   async function flush(): Promise<void> {
@@ -108,10 +98,9 @@ export function createGenreStore(
     },
     getSnapshot: () => snapshot,
     init,
-    recordWrong,
-    recordRight,
-    clear,
     flush,
+    apply,
+    clear,
   };
 }
 

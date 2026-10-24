@@ -1,11 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { GenreCard } from '../components/GenreCard';
@@ -14,106 +8,64 @@ import { VerdictStamp } from '../components/VerdictStamp';
 import { copy } from '../copy';
 import { colors, fonts, mono, serif } from '../theme';
 import { genreStore, useGenreState } from '../storage/genreStore';
+import { articleFor, reviewCount } from '../domain/genre';
+import type { Gender, ReviewState } from '../domain/genre';
 import {
-  SESSION_SIZE,
-  articleFor,
-  drawSession,
-  dueItems,
-  indexBank,
-  reviewCount,
-} from '../domain/genre';
-import type { AnswerOutcome, Box, Gender, ReviewState } from '../domain/genre';
+  answerSitting,
+  currentQuestion,
+  nextQuestion,
+  paperOf,
+  startSitting,
+} from '../domain/sitting';
+import type { Mode, Paper, Sitting } from '../domain/sitting';
 import { NOUNS } from '../data/nouns';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GenreDrill'>;
 
-/** The bank by word, once: a review card carries no gloss of its own. */
-const BANK = indexBank(NOUNS);
-
-type Mode = 'practice' | 'review';
-
-type Question = {
-  w: string;
-  g: Gender;
-  /** The bank's gloss; empty when the ledger holds a word the bank dropped. */
-  zh: string;
-  /** The box the question came from — null in a practice sitting. */
-  box: Box | null;
-};
-
-type PracticeAnswer = { w: string; g: Gender; correct: boolean };
-type ReviewResult = { w: string; outcome: AnswerOutcome | null };
-
-type Session = {
-  mode: Mode;
-  queue: readonly Question[];
-  index: number;
-  picked: Gender | null;
-  outcome: AnswerOutcome | null;
-  answers: readonly PracticeAnswer[];
-  results: readonly ReviewResult[];
-  finished: boolean;
-};
-
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /**
- * A sitting is a snapshot: the queue is drawn once, so answering a question
- * cannot change what the counter says the sitting contains.
+ * Draw one sitting. Ambient facts are handed in rather than reached for, so the
+ * rules a sitting keeps live in one place (`domain/sitting.ts`): the bank, the
+ * ledger, the clock and the random stream.
  */
-function buildSession(mode: Mode, review: ReviewState, now: number): Session {
-  const queue: Question[] =
-    mode === 'practice'
-      ? drawSession(NOUNS, SESSION_SIZE, Math.random).map(noun => ({
-          w: noun.w,
-          g: noun.g,
-          zh: noun.zh,
-          box: null,
-        }))
-      : dueItems(review, now)
-          .slice(0, SESSION_SIZE)
-          .map(item => ({
-            w: item.w,
-            g: item.g,
-            zh: BANK.get(item.w)?.zh ?? '',
-            box: item.box,
-          }));
-  return {
+function draw(mode: Mode, ledger: ReviewState): Sitting {
+  return startSitting({
     mode,
-    queue,
-    index: 0,
-    picked: null,
-    outcome: null,
-    answers: [],
-    results: [],
-    finished: false,
-  };
+    ledger,
+    bank: NOUNS,
+    now: Date.now(),
+    rand: Math.random,
+  });
 }
 
 /**
  * One sitting: twenty le/la questions, then the paper.
  *
- * Answers are written to the ledger as they happen — a wrong word joins it, a
- * right review answer moves a box — so leaving mid-sitting keeps what was
- * already answered and nothing else. The summary is paper, not a record: no
- * score is kept anywhere, and "Encore" simply draws another sitting.
+ * The screen is a view of the sitting, not the rule that keeps it: which
+ * question is open, what an answer did, and what the paper counts all come
+ * from `domain/sitting.ts`. Answers reach the ledger as they happen — a wrong
+ * word joins it, a right review answer moves a box — so leaving mid-sitting
+ * keeps what was already answered and nothing else. The summary is paper, not
+ * a record: no score is kept anywhere, and "Encore" simply draws another
+ * sitting.
  */
 export function GenreDrillScreen({ route, navigation }: Props) {
   const { review, ready } = useGenreState();
-  const [session, setSession] = useState<Session | null>(null);
+  const [sitting, setSitting] = useState<Sitting | null>(null);
   const mode = route.params.mode;
 
   // Built once, after the ledger is readable: a review queue cannot be drawn
   // from a box that has not loaded, and rebuilding it on every answer would
   // renumber the sitting under the question being asked.
   useEffect(() => {
-    if (ready && session === null) {
-      setSession(buildSession(mode, review, Date.now()));
+    if (ready && sitting === null) {
+      setSitting(draw(mode, review));
     }
-  }, [mode, ready, review, session]);
+  }, [mode, ready, review, sitting]);
 
-  if (!ready || session === null) {
+  if (!ready || sitting === null) {
     return <Screen />;
   }
 
@@ -128,17 +80,19 @@ export function GenreDrillScreen({ route, navigation }: Props) {
     </View>
   );
 
-  const title = (text: string) => bar(<Text style={styles.barTitle}>{text}</Text>);
+  const title = (text: string) =>
+    bar(<Text style={styles.barTitle}>{text}</Text>);
 
-  const start = (nextMode: Mode) =>
-    setSession(buildSession(nextMode, review, Date.now()));
+  const start = (nextMode: Mode) => setSitting(draw(nextMode, review));
 
-  if (session.queue.length === 0) {
+  if (sitting.questions.length === 0) {
     // Reachable by a stale link or a hand-assembled route; the lobby already
     // keeps the button shut when the box is empty.
     return (
       <Screen>
-        {title(session.mode === 'practice' ? copy.genreSessionTitle : copy.genreKind)}
+        {title(
+          sitting.mode === 'practice' ? copy.genreSessionTitle : copy.genreKind,
+        )}
         <View style={styles.summary}>
           <Text style={styles.note}>{copy.genreEmpty}</Text>
         </View>
@@ -146,25 +100,24 @@ export function GenreDrillScreen({ route, navigation }: Props) {
     );
   }
 
-  if (session.finished) {
+  if (sitting.finished) {
+    const paper = paperOf(sitting);
     const due = reviewCount(review, Date.now());
     return (
       <Screen>
         {title(
-          session.mode === 'practice'
-            ? copy.genreSessionTitle
-            : copy.genreKind,
+          sitting.mode === 'practice' ? copy.genreSessionTitle : copy.genreKind,
         )}
-        {session.mode === 'practice' ? (
+        {paper.kind === 'practice' ? (
           <PracticeSummary
-            session={session}
+            paper={paper}
             due={due}
             onAgain={() => start('practice')}
             onReview={() => start('review')}
           />
         ) : (
           <ReviewSummary
-            session={session}
+            paper={paper}
             due={due}
             onAgain={() => start('review')}
           />
@@ -173,73 +126,31 @@ export function GenreDrillScreen({ route, navigation }: Props) {
     );
   }
 
-  const question = session.queue[session.index];
-  const last = session.index + 1 >= session.queue.length;
+  const question = currentQuestion(sitting);
+  if (question === null) {
+    // The empty queue and the finished paper were both answered above; this is
+    // only here so the card is never asked to draw nothing.
+    return <Screen />;
+  }
+
+  const last = sitting.index + 1 >= sitting.questions.length;
 
   const answer = (gender: Gender) => {
-    if (session.picked !== null) {
-      return;
+    const step = answerSitting(sitting, gender, review, Date.now());
+    // A refused answer hands the same ledger back — the question is already
+    // locked, so there is nothing new to write down.
+    if (step.ledger !== review) {
+      genreStore.apply(step.ledger);
     }
-    const correct = question.g === gender;
-    if (session.mode === 'practice') {
-      if (!correct) {
-        genreStore.recordWrong(question);
-      }
-      setSession({
-        ...session,
-        picked: gender,
-        // A right practice answer has nothing to add: it changed no box.
-        outcome: correct ? null : { kind: 'toReview' },
-        answers: [
-          ...session.answers,
-          { w: question.w, g: question.g, correct },
-        ],
-      });
-      return;
-    }
-    if (correct) {
-      const written = genreStore.recordRight(question);
-      const outcome: AnswerOutcome | null =
-        written.kind === 'advanced'
-          ? { kind: 'advanced', box: written.box }
-          : written.kind === 'graduated'
-            ? { kind: 'graduated' }
-            : null;
-      setSession({
-        ...session,
-        picked: gender,
-        outcome,
-        results: [...session.results, { w: question.w, outcome }],
-      });
-      return;
-    }
-    genreStore.recordWrong(question);
-    const outcome: AnswerOutcome = { kind: 'sentBack' };
-    setSession({
-      ...session,
-      picked: gender,
-      outcome,
-      results: [...session.results, { w: question.w, outcome }],
-    });
+    setSitting(step.sitting);
   };
 
-  const next = () => {
-    if (session.picked === null) {
-      return;
-    }
-    setSession({
-      ...session,
-      index: last ? session.index : session.index + 1,
-      picked: null,
-      outcome: null,
-      finished: last,
-    });
-  };
+  const next = () => setSitting(nextQuestion(sitting));
 
   return (
     <Screen
       footer={
-        session.picked === null ? undefined : (
+        sitting.picked === null ? undefined : (
           <View style={styles.footerRow}>
             <OutlinedButton
               label={last ? copy.genreFinish : copy.genreNext}
@@ -251,15 +162,15 @@ export function GenreDrillScreen({ route, navigation }: Props) {
     >
       {bar(
         <Text style={styles.counter}>
-          {pad(session.index + 1)} / {pad(session.queue.length)}
+          {pad(sitting.index + 1)} / {pad(sitting.questions.length)}
         </Text>,
       )}
       <GenreCard
         word={question.w}
         gloss={question.zh}
         gender={question.g}
-        picked={session.picked}
-        outcome={session.outcome}
+        picked={sitting.picked}
+        outcome={sitting.outcome}
         reviewBox={question.box}
         onPick={answer}
       />
@@ -269,32 +180,28 @@ export function GenreDrillScreen({ route, navigation }: Props) {
 
 /** The practice paper: how many were right, and which words were not. */
 function PracticeSummary({
-  session,
+  paper,
   due,
   onAgain,
   onReview,
 }: {
-  session: Session;
+  paper: Extract<Paper, { kind: 'practice' }>;
   due: number;
   onAgain: () => void;
   onReview: () => void;
 }) {
-  const right = session.answers.filter(answer => answer.correct).length;
-  const misses = session.answers.filter(answer => !answer.correct);
-  const flawless = session.answers.length > 0 && misses.length === 0;
-
   return (
     <ScrollView contentContainerStyle={styles.summary}>
       <Text style={styles.score}>
-        {copy.genreScore(right, session.answers.length)}
+        {copy.genreScore(paper.right, paper.answered)}
       </Text>
-      {flawless ? <VerdictStamp tier="flawless" /> : null}
-      {misses.length === 0 ? null : (
+      {paper.flawless ? <VerdictStamp tier="flawless" /> : null}
+      {paper.misses.length === 0 ? null : (
         <View style={styles.misses}>
-          {misses.map(answer => (
-            <View key={answer.w} style={styles.missRow}>
-              <Text style={styles.missWord}>{answer.w}</Text>
-              <Text style={styles.missArticle}>{articleFor(answer.g)}</Text>
+          {paper.misses.map(miss => (
+            <View key={miss.w} style={styles.missRow}>
+              <Text style={styles.missWord}>{miss.w}</Text>
+              <Text style={styles.missArticle}>{articleFor(miss.g)}</Text>
             </View>
           ))}
         </View>
@@ -313,36 +220,27 @@ function PracticeSummary({
 
 /** The review paper: how many words came back, and what the boxes did. */
 function ReviewSummary({
-  session,
+  paper,
   due,
   onAgain,
 }: {
-  session: Session;
+  paper: Extract<Paper, { kind: 'review' }>;
   due: number;
   onAgain: () => void;
 }) {
-  const advanced = session.results.filter(
-    result => result.outcome?.kind === 'advanced',
-  ).length;
-  const graduated = session.results.filter(
-    result => result.outcome?.kind === 'graduated',
-  ).length;
-  const sentBack = session.results.filter(
-    result => result.outcome?.kind === 'sentBack',
-  ).length;
-  const parts = [copy.genreAdvanced(advanced)];
-  if (graduated > 0) {
-    parts.push(copy.genreGraduatedCount(graduated));
+  const parts = [copy.genreAdvanced(paper.advanced)];
+  if (paper.graduated > 0) {
+    parts.push(copy.genreGraduatedCount(paper.graduated));
   }
-  if (sentBack > 0) {
-    parts.push(copy.genreSentBack(sentBack));
+  if (paper.sentBack > 0) {
+    parts.push(copy.genreSentBack(paper.sentBack));
   }
 
   return (
     <ScrollView contentContainerStyle={styles.summary}>
-      <Text style={styles.score}>{session.results.length}</Text>
+      <Text style={styles.score}>{paper.reviewed}</Text>
       <Text style={styles.note}>
-        {copy.genreReviewed(session.results.length)} · {parts.join(' · ')}
+        {copy.genreReviewed(paper.reviewed)} · {parts.join(' · ')}
       </Text>
       <View style={styles.again}>
         <OutlinedButton

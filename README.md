@@ -41,7 +41,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：246 个用例，覆盖领域逻辑（含备份信封、主人名、旧数据迁移、默写判定、辨性的 4 箱 Leitner 与抽题、拖动自动滚动的算式与搜索的折叠/匹配）、
+npm test               # jest：263 个用例，覆盖领域逻辑（含备份信封、主人名、旧数据迁移、默写判定、辨性的 4 箱 Leitner 与抽题、一局的锁定与结算纸、拖动自动滚动的算式与搜索的折叠/匹配）、
                        #        存储（含主人名与复习箱）、组件（变位行、默写行、列表行、搜索框、⋯ 菜单、辨性题卡）、列表页、详情页（含自测与默写）、
                        #        辨性两屏（门厅 / 一局）与 App 装配
 npm run typecheck      # tsc --noEmit
@@ -58,10 +58,11 @@ src/domain/search.ts        纯逻辑：折叠（忽略大小写与重音）、�
 src/domain/backup.ts        备份信封：序列化、文件名、容错解析（纯逻辑，可单测）
 src/domain/dictation.ts     纯逻辑：默写判定（trim 后逐字比对、逐行判、首判全对）（可单测，无原生依赖）
 src/domain/genre.ts         纯逻辑：辨性的抽题（√词频、无放回）与 4 箱 Leitner、复习箱的容错读盘（可单测，无原生依赖）
+src/domain/sitting.ts       纯逻辑：**一局**的值与规则——抽题（词库 / 到期）、作答锁定、逐题推进、结算纸；箱的算术仍归 genre.ts，时钟与随机流走参数（可单测，无原生依赖）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/storage/ownerStore.ts   **主人**名字的存储：一个键、立即落盘、不防抖（名字不是一个字一个字值得等的输入）
-src/storage/genreStore.ts   **复习箱**的存储：一题一次立即落盘；不随备份移动
+src/storage/genreStore.ts   **复习箱**的存储：只收**一局**算好的账（`apply`）、一题一次立即落盘；不随备份移动
 src/platform/               平台分包：导入替换的确认（Alert / window.confirm）、备份落地（Android 分享面板 / web 文件）、能否用鼠标拖动重排（`reorderByDrag`）、收起输入法时是否收起焦点（`blurOnKeyboardHide`）
 src/data/seed.ts            首启的三条示例条目
 src/data/nouns.ts           内置**词库**：top-1000 名词 + 中文短注（`tools/make-nouns.py` 生成，勿手改）
@@ -96,6 +97,7 @@ assets/fonts/               字体源文件（构建时同步进 android/app/src
 - **答错进入复习箱第 1 箱**（当场到期）；练习中答对不入箱。复习只抽到期的词，答对升一箱（间隔 0 / 1 / 3 / 7 天），第 4 箱答对即**毕业**并移出；答错一律退回第 1 箱，无论它原来在几箱。
 - **箱里只记词形、性别与箱号**，不存短注的副本：复习卡按词形回**词库**取那一行中文。词库日后若删掉某个词，题照出、短注留空——箱里的账是用户的，不因词库改版而丢。
 - **落盘**：键 `verbcodex.genre.v1`（Android 走 AsyncStorage，web 走 localStorage），一题一次立即写、不防抖，切后台再 flush。它**不随导出 / 导入移动**：备份只含**动词条目**与**主人**名，与**词库**一样留在本机。
+- **一局是一条纯逻辑**（`src/domain/sitting.ts`）：抽题（练习局看词频、复习局看到期）、作答后锁定、逐题推进与结算纸都在那里，时钟 `now` 与随机流 `rand` 是参数；`genreStore` 只收**一局**算好的账（`apply`）并落盘，不判对错、不读表。所以「一局的规则」可以对着一个值断言，不必按过二十张题卡。
 - **不存分数**：结算只是纸面——练习纸写对错与错词清单，复习纸写升箱 / 毕业 / 退回的条数。退出即散，法典不记次数与历史；`Vider la Boîte (N)` 是两次点击确认，清空它不损失任何**记录值**。
 - **词库再生**（只在改词库时跑，产物已提交）：
   ```sh

@@ -7,7 +7,13 @@ import { VerdictStamp } from '../../src/components/VerdictStamp';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
 import { GenreDrillScreen } from '../../src/screens/GenreDrillScreen';
 import { copy } from '../../src/copy';
-import { SESSION_SIZE, articleFor } from '../../src/domain/genre';
+import {
+  SESSION_SIZE,
+  articleFor,
+  emptyReview,
+  recordWrong,
+} from '../../src/domain/genre';
+import type { ReviewState } from '../../src/domain/genre';
 import { genreStore } from '../../src/storage/genreStore';
 import { NOUNS } from '../../src/data/nouns';
 
@@ -29,6 +35,14 @@ afterEach(() => {
   mounted.length = 0;
 });
 
+/** A ledger holding `held`, each in box 1 and due at once — what a wrong answer leaves. */
+function ledgerOf(held: readonly { w: string; g: 'm' | 'f' }[]): ReviewState {
+  return held.reduce<ReviewState>(
+    (ledger, noun) => recordWrong(ledger, noun, Date.now()),
+    emptyReview(),
+  );
+}
+
 /** Render a sitting, with `held` words already due in the ledger. */
 async function renderDrill(
   mode: 'practice' | 'review',
@@ -37,8 +51,7 @@ async function renderDrill(
   // The ledger is the app singleton: what a review asks is what was written.
   await ReactTestRenderer.act(async () => {
     await genreStore.init();
-    genreStore.clear();
-    held.forEach(noun => genreStore.recordWrong(noun));
+    genreStore.apply(ledgerOf(held));
   });
   const navigation = {
     navigate: jest.fn(),
@@ -88,7 +101,10 @@ function card(tree: ReactTestRenderer.ReactTestRenderer) {
 }
 
 /** Press whichever article the current card is asking for. */
-async function answer(tree: ReactTestRenderer.ReactTestRenderer, article: string) {
+async function answer(
+  tree: ReactTestRenderer.ReactTestRenderer,
+  article: string,
+) {
   const text = tree.root
     .findAllByType(Text)
     .find(node => node.props.children === article);
@@ -117,7 +133,9 @@ describe('GenreDrillScreen', () => {
   it('asks twenty questions, one at a time, and reveals after an answer', async () => {
     const { tree } = await renderDrill('practice');
 
-    expect(texts(tree)).toContain(`01 / ${String(SESSION_SIZE).padStart(2, '0')}`);
+    expect(texts(tree)).toContain(
+      `01 / ${String(SESSION_SIZE).padStart(2, '0')}`,
+    );
     // Nothing to advance to until the question has been answered.
     expect(labels(tree)).toEqual([]);
 
@@ -138,7 +156,9 @@ describe('GenreDrillScreen', () => {
     await answer(tree, articleFor(card(tree).gender));
     await press(tree, copy.genreNext);
 
-    expect(texts(tree)).toContain(`02 / ${String(SESSION_SIZE).padStart(2, '0')}`);
+    expect(texts(tree)).toContain(
+      `02 / ${String(SESSION_SIZE).padStart(2, '0')}`,
+    );
     expect(card(tree).word).not.toBe(first);
     expect(card(tree).picked).toBeNull();
   });
@@ -236,8 +256,10 @@ describe('GenreDrillScreen', () => {
     const score = texts(tree).find(text => text === '2');
     expect(score).toBe('2');
     expect(texts(tree)).toContain(
-      `${copy.genreReviewed(2)} · ${copy.genreAdvanced(1)} · ${copy.genreSentBack(1)}`,
-    );    // One word is due again at once; the other moved a day out.
+      `${copy.genreReviewed(2)} · ${copy.genreAdvanced(
+        1,
+      )} · ${copy.genreSentBack(1)}`,
+    ); // One word is due again at once; the other moved a day out.
     expect(labels(tree)).toContain(copy.genreReviewAgain(1));
   });
 
@@ -249,7 +271,9 @@ describe('GenreDrillScreen', () => {
   });
 
   it('still asks a word the bank no longer carries, without a gloss', async () => {
-    const { tree } = await renderDrill('review', [{ w: 'mot-inconnu', g: 'm' }]);
+    const { tree } = await renderDrill('review', [
+      { w: 'mot-inconnu', g: 'm' },
+    ]);
 
     const question = card(tree);
     expect(question.word).toBe('mot-inconnu');

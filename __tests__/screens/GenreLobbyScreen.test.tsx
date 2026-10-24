@@ -5,6 +5,8 @@ import ReactTestRenderer from 'react-test-renderer';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
 import { GenreLobbyScreen } from '../../src/screens/GenreLobbyScreen';
 import { copy } from '../../src/copy';
+import { emptyReview, recordWrong } from '../../src/domain/genre';
+import type { ReviewState } from '../../src/domain/genre';
 import { genreStore } from '../../src/storage/genreStore';
 
 type ScreenProps = React.ComponentProps<typeof GenreLobbyScreen>;
@@ -25,14 +27,21 @@ afterEach(() => {
   mounted.length = 0;
 });
 
+/** A ledger holding `held`, each in box 1 and due at once — what a wrong answer leaves. */
+function ledgerOf(held: readonly { w: string; g: 'm' | 'f' }[]): ReviewState {
+  return held.reduce<ReviewState>(
+    (ledger, noun) => recordWrong(ledger, noun, Date.now()),
+    emptyReview(),
+  );
+}
+
 /** Render the lobby with `held` words already in the ledger (due at once). */
 async function renderLobby(held: readonly { w: string; g: 'm' | 'f' }[] = []) {
   // The ledger is the app singleton, so what the lobby reads is what was
   // actually written in this test.
   await ReactTestRenderer.act(async () => {
     await genreStore.init();
-    genreStore.clear();
-    held.forEach(noun => genreStore.recordWrong(noun));
+    genreStore.apply(ledgerOf(held));
   });
   const navigation = {
     navigate: jest.fn(),
