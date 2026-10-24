@@ -1,6 +1,5 @@
 import {
   BOX_DAYS,
-  SESSION_SIZE,
   articleFor,
   boxCount,
   drawSession,
@@ -15,6 +14,7 @@ import {
   serializeReview,
 } from '../../src/domain/genre';
 import type { Noun, ReviewItem, ReviewState } from '../../src/domain/genre';
+import { SESSION_SIZE } from '../../src/domain/sitting';
 
 const DAY = 86_400_000;
 const NOW = 1_700_000_000_000;

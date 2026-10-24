@@ -1,4 +1,5 @@
 import {
+  SESSION_SIZE,
   answerSitting,
   currentQuestion,
   nextQuestion,
@@ -6,7 +7,7 @@ import {
   startSitting,
 } from '../../src/domain/sitting';
 import type { Sitting } from '../../src/domain/sitting';
-import { SESSION_SIZE, emptyReview } from '../../src/domain/genre';
+import { emptyReview } from '../../src/domain/genre';
 import type {
   Gender,
   Noun,

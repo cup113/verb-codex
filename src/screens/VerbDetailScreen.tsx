@@ -27,8 +27,8 @@ import {
   GROUP_BACK_LABELS,
   GROUP_TAB_LABELS,
   ROW_COUNT,
-  pronounFor,
 } from '../types';
+import { pronounFor } from '../domain/pronouns';
 import { isComplete } from '../domain/verbs';
 import {
   finishedOf,

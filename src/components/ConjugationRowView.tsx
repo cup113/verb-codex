@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ConjugationRow, pronounFor } from '../types';
+import { ConjugationRow } from '../types';
+import { pronounFor } from '../domain/pronouns';
 import { colors, mono } from '../theme';
 import { copy } from '../copy';
 

@@ -34,9 +34,6 @@ export type ReviewState = {
   items: Readonly<Record<string, ReviewItem>>;
 };
 
-/** One sitting is twenty questions, drawn without replacement. */
-export const SESSION_SIZE = 20;
-
 const DAY_MS = 86_400_000;
 
 /**

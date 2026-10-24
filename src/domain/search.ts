@@ -1,4 +1,5 @@
-import { pronounFor, Verb } from '../types';
+import { pronounFor } from './pronouns';
+import { Verb } from '../types';
 
 /**
  * The French letters folded to their unaccented twins, so a keyboard without

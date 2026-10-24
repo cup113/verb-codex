@@ -7,13 +7,9 @@ import { VerdictStamp } from '../../src/components/VerdictStamp';
 import { OutlinedButton } from '../../src/components/OutlinedButton';
 import { GenreDrillScreen } from '../../src/screens/GenreDrillScreen';
 import { copy } from '../../src/copy';
-import {
-  SESSION_SIZE,
-  articleFor,
-  emptyReview,
-  recordWrong,
-} from '../../src/domain/genre';
+import { articleFor, emptyReview, recordWrong } from '../../src/domain/genre';
 import type { ReviewState } from '../../src/domain/genre';
+import { SESSION_SIZE } from '../../src/domain/sitting';
 import { genreStore } from '../../src/storage/genreStore';
 import { NOUNS } from '../../src/data/nouns';
 

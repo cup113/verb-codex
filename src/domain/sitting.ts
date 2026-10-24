@@ -16,7 +16,6 @@
  */
 
 import {
-  SESSION_SIZE,
   drawSession,
   dueItems,
   indexBank,
@@ -31,6 +30,13 @@ import type {
   ReviewState,
   RightOutcome,
 } from './genre';
+
+/**
+ * One sitting is twenty questions, drawn without replacement when the bank can
+ * supply them. A sitting's own size, so it lives with the sitting: `genre.ts`
+ * draws whatever it is asked for, and knows no queue length.
+ */
+export const SESSION_SIZE = 20;
 
 /** Which way the sitting was entered from the lobby. */
 export type Mode = 'practice' | 'review';

@@ -30,16 +30,6 @@ export const ROW_COUNT = 6;
 
 export const GROUPS: readonly Group[] = [1, 2, 3];
 
-/** Fixed display order of the six conjugation rows. */
-export const PRONOUNS = [
-  'je',
-  'tu',
-  'il / elle',
-  'nous',
-  'vous',
-  'ils / elles',
-] as const;
-
 export const GROUP_LABELS: Record<Group, string> = {
   1: '1er Groupe (-er)',
   2: '2e (-ir)',
@@ -64,19 +54,3 @@ export const GROUP_BACK_LABELS: Record<Group, string> = {
   2: '2e',
   3: '3e',
 };
-
-// Elision is a display convenience only: the codex never judges French. A mute
-// "h" is elided, an aspirated one is not, and this heuristic cannot tell them
-// apart — the user's own recording stays untouched either way.
-const ELISION = /^[aàâäeéèêëiîïoôöuùûüœh]/i;
-
-/**
- * The first letter the pronoun faces on screen: the row's recorded form. The
- * regex is anchored, so a blank row simply reads as "je".
- */
-export function pronounFor(rowIndex: number, form: string): string {
-  if (rowIndex !== 0) {
-    return PRONOUNS[rowIndex] ?? '';
-  }
-  return ELISION.test(form.trim()) ? "j'" : 'je';
-}
