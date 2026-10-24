@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   KeyboardAvoidingView,
@@ -29,19 +29,22 @@ import {
   pronounFor,
 } from '../types';
 import { isComplete } from '../domain/verbs';
-import { checkPaper } from '../domain/dictation';
-import type { CheckedRow } from '../domain/dictation';
+import {
+  finishedOf,
+  reveal,
+  startDictation,
+  startSelfTest,
+  verify,
+  write,
+  type Exercise,
+} from '../domain/exercise';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerbDetail'>;
 
 /**
- * What the card is doing. The words on it are the same six rows throughout —
- * only what they can do changes, so the card never moves.
+ * A flawless paper inks its six rows one after another, then stamps.
  */
-type Mode = 'view' | 'test' | 'write' | 'done';
-
-/** A flawless paper inks its six rows one after another, then stamps. */
 const SETTLE_STAGGER_MS = 90;
 const STAMP_LAG_MS = 200;
 
@@ -52,28 +55,16 @@ const STAMP_LAG_MS = 200;
  */
 const DELETE_ARMED_MS = 3000;
 
-const blankInputs = (): string[] =>
-  Array.from({ length: ROW_COUNT }, () => '');
-
-const blankVerdicts = (): CheckedRow[] =>
-  Array.from({ length: ROW_COUNT }, () => null);
-
 export function VerbDetailScreen({ route, navigation }: Props) {
   const { verbs } = useVerbState();
   const verb = verbs.find(item => item.id === route.params.verbId);
-  const [mode, setMode] = useState<Mode>('view');
-  const [revealed, setRevealed] = useState<ReadonlySet<number>>(
-    () => new Set<number>(),
-  );
-  /** The words typed for a dictation, one per row; empty outside one. */
-  const [typed, setTyped] = useState<string[]>(blankInputs);
-  const [checked, setChecked] = useState<CheckedRow[]>(blankVerdicts);
   /**
-   * Whether the paper was flawless when it was first checked. A round that
-   * needed correcting keeps this false to the end, so its stamp is the lesser
-   * one — see ADR 0002.
+   * What the card is doing, if anything: `null` is the card at rest. Every
+   * exercise replaces this value wholesale, which is also why leaving one needs
+   * no clearing — an attempt cannot be kept, because there is nowhere to keep
+   * it but here.
    */
-  const [flawless, setFlawless] = useState(false);
+  const [exercise, setExercise] = useState<Exercise | null>(null);
   /**
    * The corner's two pending questions: a delete waiting for its second touch,
    * and the group the entry is being moved to. Only one is ever live at once.
@@ -94,16 +85,10 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     };
   }, []);
 
-  // Every exercise is left through here: nothing typed in a dictation is kept,
-  // so leaving the card and coming back starts a fresh paper. The codex keeps
-  // recorded words, never attempts at them.
-  const exitToView = useCallback(() => {
-    setMode('view');
-    setRevealed(new Set<number>());
-    setTyped(blankInputs());
-    setChecked(blankVerdicts());
-    setFlawless(false);
-  }, []);
+  // Every exercise is left through here: dropping the value drops the attempt
+  // with it, so leaving the card and coming back starts a fresh paper. The
+  // codex keeps recorded words, never attempts at them.
+  const leave = () => setExercise(null);
 
   // Android back leaves an exercise before it leaves the entry, and drops a
   // question the corner is still asking before that. There is no hardware key
@@ -115,8 +100,8 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (mode !== 'view') {
-          exitToView();
+        if (exercise !== null) {
+          setExercise(null);
           return true;
         }
         if (pickerOpen || deleteArmed) {
@@ -132,7 +117,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
       },
     );
     return () => subscription.remove();
-  }, [mode, exitToView, pickerOpen, deleteArmed]);
+  }, [exercise, pickerOpen, deleteArmed]);
 
   // The way back names the group the list behind is standing in — the group it
   // was opened from, not necessarily the one the entry stands in now: an entry
@@ -205,110 +190,79 @@ export function VerbDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  const reveal = (index: number) => {
-    setRevealed(previous => {
-      const next = new Set(previous);
-      next.add(index);
-      return next;
-    });
-  };
-
-  const enterTest = () => {
-    setRevealed(new Set<number>());
-    setMode('test');
-  };
-
-  const enterWrite = () => {
-    setTyped(blankInputs());
-    setChecked(blankVerdicts());
-    setFlawless(false);
-    setMode('write');
-  };
-
-  const changeDictation = (index: number, text: string) => {
-    setTyped(previous =>
-      previous.map((word, i) => (i === index ? text : word)),
-    );
-    // Editing a crossed-out row withdraws its verdict: the next check judges
-    // the corrected word on its own, and the strike goes with the verdict.
-    setChecked(previous =>
-      previous.map((verdict, i) =>
-        i === index && verdict === 'bad' ? null : verdict,
-      ),
-    );
-  };
-
-  const verify = () => {
-    const result = checkPaper({
-      inputs: typed,
-      recorded: verb.rows.map(row => row.form),
-      previous: checked,
-    });
-    setChecked(result.verdicts);
-    setFlawless(result.flawless);
-    if (result.done) {
-      setMode('done');
-    }
-  };
-
+  /**
+   * The exercise being played, as a dictation — `null` for the card at rest and
+   * for a self-test, which shares none of a paper's state.
+   */
+  const dictation = exercise?.kind === 'dictation' ? exercise : null;
+  /** The six recorded words a paper would be graded against, right now. */
+  const recorded = verb.rows.map(row => row.form);
   const complete = isComplete(verb);
-  const dictating = mode === 'write' || mode === 'done';
-  const anyWrong = checked.includes('bad');
+  const finished = exercise !== null && finishedOf(exercise);
+  const flawless = dictation !== null && dictation.flawless;
+  const anyWrong = dictation !== null && dictation.verdicts.includes('bad');
 
   const buttons =
-    mode === 'view'
+    exercise === null
       ? [
           <OutlinedButton
             key="write"
             label={copy.dictate}
-            onPress={enterWrite}
+            onPress={() => setExercise(startDictation(recorded))}
             disabled={!complete}
           />,
           <OutlinedButton
             key="test"
             label={copy.selfTest}
             tone="terracotta"
-            onPress={enterTest}
+            onPress={() => setExercise(startSelfTest())}
           />,
         ]
-      : mode === 'test'
+      : exercise.kind === 'selfTest'
       ? [
+          // The rows are all readable again on the way out, which is what the
+          // word promises: this ends the exercise rather than unmasking six
+          // rows one at a time.
           <OutlinedButton
             key="reveal"
             label={copy.revealAll}
-            onPress={exitToView}
+            onPress={leave}
           />,
         ]
-      : mode === 'write'
+      : finished
       ? [
-          <OutlinedButton key="quit" label={copy.quit} onPress={exitToView} />,
           <OutlinedButton
-            key="verify"
-            label={copy.verify}
-            tone="terracotta"
-            onPress={verify}
+            key="again"
+            label={copy.again}
+            onPress={() => setExercise(startDictation(recorded))}
           />,
-        ]
-      : [
-          <OutlinedButton key="again" label={copy.again} onPress={enterWrite} />,
           <OutlinedButton
             key="proceed"
             label={copy.proceed}
             tone="terracotta"
-            onPress={exitToView}
+            onPress={leave}
+          />,
+        ]
+      : [
+          <OutlinedButton key="quit" label={copy.quit} onPress={leave} />,
+          <OutlinedButton
+            key="verify"
+            label={copy.verify}
+            tone="terracotta"
+            onPress={() => setExercise(current => current && verify(current))}
           />,
         ];
 
   const tip =
-    mode === 'view'
+    exercise === null
       ? copy.tip
-      : mode === 'test'
+      : exercise.kind === 'selfTest'
       ? copy.tipLocked
-      : mode === 'write'
-      ? anyWrong
-        ? copy.tipCorrect
-        : copy.tipWrite
-      : '';
+      : finished
+      ? ''
+      : anyWrong
+      ? copy.tipCorrect
+      : copy.tipWrite;
 
   return (
     // Edge-to-edge: without this the body keeps full height behind the IME,
@@ -375,7 +329,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
         >
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              {mode !== 'view' ? (
+              {exercise !== null ? (
                 <Text style={styles.infinitiveText} numberOfLines={1}>
                   {verb.infinitive}
                 </Text>
@@ -398,19 +352,27 @@ export function VerbDetailScreen({ route, navigation }: Props) {
                   keeps every row in place and only makes it read-only; a
                   dictation empties the fields and fills them back in the
                   user's own hand — the card must not move either way. */}
-              {dictating
+              {dictation !== null
                 ? verb.rows.map((row, index) => (
                     <DictationRow
                       key={index}
                       pronoun={pronounFor(index, row.form)}
                       // A finished paper shows the recorded words back, inked;
                       // until then the row shows what the user typed.
-                      value={mode === 'done' ? row.form : typed[index]}
-                      verdict={checked[index] ?? null}
-                      settleDelay={
-                        flawless ? index * SETTLE_STAGGER_MS : 0
+                      value={
+                        finished
+                          ? dictation.recorded[index]
+                          : dictation.typed[index]
                       }
-                      onChange={text => changeDictation(index, text)}
+                      verdict={dictation.verdicts[index] ?? null}
+                      settleDelay={flawless ? index * SETTLE_STAGGER_MS : 0}
+                      onChange={text =>
+                        setExercise(current =>
+                          current === null
+                            ? current
+                            : write(current, index, text),
+                        )
+                      }
                     />
                   ))
                 : verb.rows.map((row, index) => (
@@ -418,16 +380,23 @@ export function VerbDetailScreen({ route, navigation }: Props) {
                       key={index}
                       rowIndex={index}
                       row={row}
-                      editing={mode === 'view'}
-                      revealed={revealed.has(index)}
-                      onReveal={() => reveal(index)}
+                      editing={exercise === null}
+                      revealed={
+                        exercise?.kind === 'selfTest' &&
+                        exercise.revealed.has(index)
+                      }
+                      onReveal={() =>
+                        setExercise(current =>
+                          current === null ? current : reveal(current, index),
+                        )
+                      }
                       onChangeForm={text =>
                         verbStore.setRow(verb.id, index, { form: text })
                       }
                     />
                   ))}
             </View>
-            {mode === 'done' ? (
+            {finished ? (
               <View style={styles.verdictArea}>
                 <VerdictStamp
                   tier={flawless ? 'flawless' : 'corrected'}
@@ -440,7 +409,7 @@ export function VerbDetailScreen({ route, navigation }: Props) {
               </View>
             ) : null}
           </View>
-          {mode === 'view' ? (
+          {exercise === null ? (
             <View style={styles.noteCard}>
               <Text style={styles.noteLabel}>{copy.noteLabel}</Text>
               <TextInput
