@@ -1,8 +1,4 @@
-import {
-  backupFileName,
-  parseBackup,
-  serializeBackup,
-} from '../../src/domain/backup';
+import { parseBackup, restoreFrom, writeCodex } from '../../src/domain/backup';
 import { emptyRows } from '../../src/domain/verbs';
 import { Verb } from '../../src/types';
 
@@ -24,11 +20,13 @@ function verb(overrides: Partial<Verb> = {}): Verb {
   };
 }
 
-describe('serializeBackup', () => {
+describe('writeCodex', () => {
   it('round-trips every field of every entry', () => {
     const verbs = [verb(), verb({ id: 'v2', infinitive: 'finir', group: 2 })];
 
-    const read = parseBackup(serializeBackup(verbs, EXPORTED_AT, ''));
+    const read = parseBackup(
+      writeCodex({ verbs, owner: '' }, EXPORTED_AT).text,
+    );
 
     expect(read.ok).toBe(true);
     expect(read.ok && read.verbs).toEqual(verbs);
@@ -36,20 +34,24 @@ describe('serializeBackup', () => {
   });
 
   it('indents the file, so its owner can read and diff it', () => {
-    expect(serializeBackup([verb()], EXPORTED_AT, '')).toContain(
-      '\n  "app": "verbcodex"',
-    );
+    expect(
+      writeCodex({ verbs: [verb()], owner: '' }, EXPORTED_AT).text,
+    ).toContain('\n  "app": "verbcodex"');
   });
 
   it('stamps the whole-word format, which a format-1 build refuses', () => {
     // Pinned as a literal on purpose: this is the number an older install
     // reads before it decides to refuse the file outright rather than import
     // six blank rows.
-    expect(serializeBackup([verb()], EXPORTED_AT, '')).toContain('"format": 2');
+    expect(
+      writeCodex({ verbs: [verb()], owner: '' }, EXPORTED_AT).text,
+    ).toContain('"format": 2');
   });
 
   it('carries the name the codex greets its owner by', () => {
-    const read = parseBackup(serializeBackup([verb()], EXPORTED_AT, 'Camille'));
+    const read = parseBackup(
+      writeCodex({ verbs: [verb()], owner: 'Camille' }, EXPORTED_AT).text,
+    );
 
     expect(read.ok && read.owner).toBe('Camille');
   });
@@ -57,7 +59,19 @@ describe('serializeBackup', () => {
   it('leaves the field out when no name has been recorded', () => {
     // The field states "this codex has a name". An empty one would state a
     // name that is blank, and importing it must not erase the reader's own.
-    expect(serializeBackup([verb()], EXPORTED_AT, '')).not.toContain('owner');
+    expect(
+      writeCodex({ verbs: [verb()], owner: '' }, EXPORTED_AT).text,
+    ).not.toContain('owner');
+  });
+
+  it('files the document under the day it was written, from one instant', () => {
+    // The name and the `exportedAt` inside the document are two readings of
+    // the same argument, so they cannot disagree: a caller has no second place
+    // to pass a timestamp.
+    const file = writeCodex({ verbs: [verb()], owner: '' }, EXPORTED_AT);
+
+    expect(file.fileName).toBe('verbcodex-2026-10-15.json');
+    expect(file.text).toContain(`"exportedAt": "${EXPORTED_AT}"`);
   });
 });
 
@@ -203,8 +217,52 @@ describe('parseBackup', () => {
   });
 });
 
-describe('backupFileName', () => {
-  it('dates the file from the moment of the export', () => {
-    expect(backupFileName(EXPORTED_AT)).toBe('verbcodex-2026-10-15.json');
+/**
+ * What a file is allowed to say about the codex it restores into.
+ *
+ * The file is the only thing that ever crosses between two devices, and both
+ * rules below are about refusing to let it say more than it says.
+ */
+describe('restoreFrom', () => {
+  const here = {
+    verbs: [verb({ id: 'v1' }), verb({ id: 'v2' })],
+    owner: 'Camille',
+  };
+
+  it("takes the file's entries wholesale, never merging them", () => {
+    const next = restoreFrom(
+      { verbs: [verb({ id: 'v9', infinitive: 'finir' })], owner: null },
+      here,
+    );
+
+    // A record its owner keeps: interleaving two records is the one outcome
+    // nobody can predict, so the entries restore as an absence of the old ones.
+    expect(next.verbs.map(v => v.id)).toEqual(['v9']);
+  });
+
+  it('adopts the name the file carries', () => {
+    const next = restoreFrom({ verbs: [verb()], owner: 'Alex' }, here);
+
+    expect(next.owner).toBe('Alex');
+  });
+
+  it('keeps the name this device knows when the file carries none', () => {
+    const next = restoreFrom({ verbs: [verb()], owner: null }, here);
+
+    // Every backup exported before the name was recorded reads this way, and
+    // restoring one must not erase the greeting on the device it lands on.
+    expect(next.owner).toBe('Camille');
+  });
+
+  it('leaves an unnamed codex unnamed when the file carries none', () => {
+    const next = restoreFrom(
+      { verbs: [verb()], owner: null },
+      {
+        verbs: [],
+        owner: '',
+      },
+    );
+
+    expect(next.owner).toBe('');
   });
 });

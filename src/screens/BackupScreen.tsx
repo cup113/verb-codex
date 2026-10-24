@@ -13,9 +13,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { OutlinedButton } from '../components/OutlinedButton';
 import {
-  backupFileName,
   parseBackup,
-  serializeBackup,
+  restoreFrom,
+  writeCodex,
   type BackupProblem,
 } from '../domain/backup';
 import { backupFile } from '../platform/backupFile';
@@ -63,13 +63,11 @@ export function BackupScreen({ navigation }: Props) {
   }, []);
 
   const exportCodex = async () => {
-    const exportedAt = new Date().toISOString();
     // The name goes with the codex: it is what the greeting reads on the device
-    // the file is restored to.
-    await backupFile.exportBackup(
-      serializeBackup(verbs, exportedAt, owner),
-      backupFileName(exportedAt),
-    );
+    // the file is restored to. One timestamp, so the file's name and its
+    // contents cannot disagree about the day they were written.
+    const file = writeCodex({ verbs, owner }, new Date().toISOString());
+    await backupFile.exportBackup(file.text, file.fileName);
     setStatus({ good: true, text: copy.exportDone(verbs.length) });
   };
 
@@ -87,15 +85,17 @@ export function BackupScreen({ navigation }: Props) {
       confirmLabel: copy.importConfirm,
       cancelLabel: copy.cancel,
       onConfirm: () => {
-        verbStore.replaceAll(read.verbs).then(() => {
-          // A name that travelled with the codex is part of what is being
-          // restored; a file without one leaves the greeting alone rather than
-          // erasing the name this device already knows.
-          if (read.owner !== null) {
-            ownerStore.setOwner(read.owner);
-          }
+        // Which of the file's statements win is the domain's answer, not this
+        // screen's: its entries always, its name only when it carries one. A
+        // file without a name leaves the greeting alone rather than erasing the
+        // name this device already knows.
+        const next = restoreFrom(read, { verbs, owner });
+        verbStore.replaceAll(next.verbs).then(() => {
+          // Always called: a name that did not change is a no-op, and an empty
+          // one here is the name this codex already had.
+          ownerStore.setOwner(next.owner);
           setPasted('');
-          setStatus({ good: true, text: copy.importDone(read.verbs.length) });
+          setStatus({ good: true, text: copy.importDone(next.verbs.length) });
         });
       },
     });

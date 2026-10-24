@@ -27,10 +27,56 @@ export type Backup = {
 };
 
 /**
+ * The whole codex as one value: the entries, and the name it greets its owner
+ * by. Every path in and out of the device passes through it, so that "a codex
+ * is its entries plus its name" is written once rather than being carried
+ * around as two loose arguments.
+ */
+export type Codex = {
+  verbs: Verb[];
+  /** `''` when no name has been recorded — the property of a codex as well. */
+  owner: string;
+};
+
+/**
+ * What leaves the device: the document, and the name it is saved under.
+ *
+ * Both are derived from the same instant, which is the point of returning them
+ * together: a caller that built its own file name could date it a second later
+ * than the contents and nobody would notice until two exports sat in a folder.
+ */
+export function writeCodex(
+  codex: Codex,
+  at: string,
+): { text: string; fileName: string } {
+  return {
+    text: serializeBackup(codex.verbs, at, codex.owner),
+    fileName: backupFileName(at),
+  };
+}
+
+/**
+ * The codex a file restores, given the one this device already holds.
+ *
+ * Two rules, both of them about what a file is allowed to say: its entries
+ * replace the codex wholesale (a record its owner keeps is not something to
+ * interleave), and its name is adopted only when the file carries one — a
+ * backup written before the name was recorded must never erase the name this
+ * device already knows. `null` is the parser's way of saying "the file states
+ * no name"; a blank one never gets this far.
+ */
+export function restoreFrom(
+  carried: { verbs: Verb[]; owner: string | null },
+  into: Codex,
+): Codex {
+  return { verbs: carried.verbs, owner: carried.owner ?? into.owner };
+}
+
+/**
  * The whole codex as one file. Indented on purpose: it is meant to be readable
  * (and diffable) by the person who owns it, not just by the app.
  */
-export function serializeBackup(
+function serializeBackup(
   verbs: Verb[],
   exportedAt: string,
   owner: string,
@@ -48,7 +94,7 @@ export function serializeBackup(
 }
 
 /** `verbcodex-2026-10-15.json`, dated from the moment of the export. */
-export function backupFileName(exportedAt: string): string {
+function backupFileName(exportedAt: string): string {
   return `verbcodex-${exportedAt.slice(0, 10)}.json`;
 }
 
