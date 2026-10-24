@@ -1,8 +1,5 @@
-import {
-  GENRE_KEY,
-  GenreStorage,
-  createGenreStore,
-} from '../../src/storage/genreStore';
+import { GENRE_KEY, createGenreStore } from '../../src/storage/genreStore';
+import type { KeyValueStorage } from '../../src/storage/keyValueStorage';
 import {
   emptyReview,
   recordRight,
@@ -17,7 +14,7 @@ const NOW = 1_700_000_000_000;
 function memoryStorage(initial: Record<string, string> = {}) {
   const entries = new Map(Object.entries(initial));
   const writes: string[] = [];
-  const storage: GenreStorage = {
+  const storage: KeyValueStorage = {
     getItem: async key => entries.get(key) ?? null,
     setItem: async (key, value) => {
       entries.set(key, value);
@@ -60,7 +57,7 @@ describe('createGenreStore', () => {
   });
 
   it('treats an unreadable key as an empty ledger', async () => {
-    const broken: GenreStorage = {
+    const broken: KeyValueStorage = {
       getItem: async () => '{"items":',
       setItem: async () => {},
     };
@@ -151,7 +148,7 @@ describe('createGenreStore', () => {
   });
 
   it('keeps the drill usable when the store refuses to write', async () => {
-    const refusing: GenreStorage = {
+    const refusing: KeyValueStorage = {
       getItem: async () => null,
       setItem: async () => {
         throw new Error('quota exceeded');

@@ -1,13 +1,10 @@
-import {
-  OWNER_KEY,
-  OwnerStorage,
-  createOwnerStore,
-} from '../../src/storage/ownerStore';
+import { OWNER_KEY, createOwnerStore } from '../../src/storage/ownerStore';
+import type { KeyValueStorage } from '../../src/storage/keyValueStorage';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const entries = new Map(Object.entries(initial));
   const writes: string[] = [];
-  const storage: OwnerStorage = {
+  const storage: KeyValueStorage = {
     getItem: async key => entries.get(key) ?? null,
     setItem: async (key, value) => {
       entries.set(key, value);
@@ -91,7 +88,7 @@ describe('createOwnerStore', () => {
   });
 
   it('keeps the greeting working when the store refuses to write', async () => {
-    const refusing: OwnerStorage = {
+    const refusing: KeyValueStorage = {
       getItem: async () => null,
       setItem: async () => {
         throw new Error('quota exceeded');
@@ -107,7 +104,7 @@ describe('createOwnerStore', () => {
   });
 
   it('treats an unreadable store as a codex with no name yet', async () => {
-    const unreadable: OwnerStorage = {
+    const unreadable: KeyValueStorage = {
       getItem: async () => {
         throw new Error('blocked');
       },

@@ -1,15 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import type { KeyValueStorage } from './keyValueStorage';
 import { emptyReview, parseReview, serializeReview } from '../domain/genre';
 import type { ReviewState } from '../domain/genre';
 
 export const GENRE_KEY = 'verbcodex.genre.v1';
-
-/** The slice of key/value storage the ledger needs; injected so tests stay native-free. */
-export type GenreStorage = {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-};
 
 export type GenreState = {
   review: ReviewState;
@@ -43,7 +38,7 @@ export type GenreStore = {
  * The key is the app's own, not the prototype's (`verbcodex-demo-genre:v1`):
  * the demo's localStorage is a rehearsal, not something to inherit.
  */
-export function createGenreStore(storage: GenreStorage): GenreStore {
+export function createGenreStore(storage: KeyValueStorage): GenreStore {
   let review: ReviewState = emptyReview();
   let ready = false;
   let snapshot: GenreState = { review, ready };

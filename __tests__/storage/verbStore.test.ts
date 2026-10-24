@@ -2,9 +2,9 @@ import { emptyRows } from '../../src/domain/verbs';
 import {
   SEEDED_KEY,
   VERBS_KEY,
-  VerbStorage,
   createVerbStore,
 } from '../../src/storage/verbStore';
+import type { KeyValueStorage } from '../../src/storage/keyValueStorage';
 import { Verb } from '../../src/types';
 
 const NOW = 1_700_000_000_000;
@@ -23,7 +23,7 @@ const OPTIONS = {
 function memoryStorage(initial: Record<string, string> = {}) {
   const entries = new Map(Object.entries(initial));
   const writes: string[] = [];
-  const storage: VerbStorage = {
+  const storage: KeyValueStorage = {
     getItem: async key => entries.get(key) ?? null,
     setItem: async (key, value) => {
       entries.set(key, value);
@@ -147,7 +147,7 @@ describe('createVerbStore', () => {
   it('survives a failing write and retries it on the next flush', async () => {
     let failing = true;
     const entries = new Map<string, string>();
-    const storage: VerbStorage = {
+    const storage: KeyValueStorage = {
       getItem: async key => entries.get(key) ?? null,
       setItem: async (key, value) => {
         if (failing) {

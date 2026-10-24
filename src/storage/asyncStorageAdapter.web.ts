@@ -1,4 +1,4 @@
-import type { VerbStorage } from './verbStore';
+import type { KeyValueStorage } from './keyValueStorage';
 
 /**
  * Web: AsyncStorage v3 ships no browser build at all (its platform folders
@@ -9,7 +9,7 @@ import type { VerbStorage } from './verbStore';
  * Note that browser storage is evictable, so a web build must not treat it
  * as the only copy: see the export/import note in the README.
  */
-export const asyncStorageAdapter: VerbStorage = {
+export const asyncStorageAdapter: KeyValueStorage = {
   getItem: async key => window.localStorage.getItem(key),
   setItem: async (key, value) => {
     window.localStorage.setItem(key, value);

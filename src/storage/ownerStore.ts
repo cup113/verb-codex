@@ -1,13 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import type { KeyValueStorage } from './keyValueStorage';
 
 export const OWNER_KEY = 'verbcodex.owner.v1';
-
-/** The slice of key/value storage the owner needs; injected so tests stay native-free. */
-export type OwnerStorage = {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-};
 
 export type OwnerState = {
   owner: string;
@@ -32,7 +27,7 @@ export type OwnerStore = {
  * draft while the field has focus and calls this on blur — an empty name is a
  * legitimate value, not a reason to keep the old one.
  */
-export function createOwnerStore(storage: OwnerStorage): OwnerStore {
+export function createOwnerStore(storage: KeyValueStorage): OwnerStore {
   let owner = '';
   let ready = false;
   let snapshot: OwnerState = { owner, ready };

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import type { KeyValueStorage } from './keyValueStorage';
 import { ConjugationRow, Group, Verb } from '../types';
 import {
   createVerb,
@@ -16,12 +17,6 @@ import { seedVerbs } from '../data/seed';
 export const VERBS_KEY = 'verbcodex.verbs.v1';
 export const SEEDED_KEY = 'verbcodex.seeded.v1';
 export const PERSIST_DEBOUNCE_MS = 300;
-
-/** The slice of key/value storage the store needs; injected so tests stay native-free. */
-export type VerbStorage = {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-};
 
 export type VerbState = {
   verbs: Verb[];
@@ -44,7 +39,7 @@ export type VerbStore = {
 };
 
 export function createVerbStore(
-  storage: VerbStorage,
+  storage: KeyValueStorage,
   options: {
     seed?: () => Verb[];
     debounceMs?: number;
@@ -276,7 +271,7 @@ export function createVerbStore(
   };
 }
 
-async function seedAlreadyRan(storage: VerbStorage): Promise<boolean> {
+async function seedAlreadyRan(storage: KeyValueStorage): Promise<boolean> {
   try {
     return (await storage.getItem(SEEDED_KEY)) === 'true';
   } catch {

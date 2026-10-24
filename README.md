@@ -62,6 +62,7 @@ src/domain/genre.ts         纯逻辑：辨性的抽题（√词频、无放回�
 src/domain/sitting.ts       纯逻辑：**一局**的值与规则——抽题（词库 / 到期）、作答锁定、逐题推进、结算纸；箱的算术仍归 genre.ts，时钟与随机流走参数（可单测，无原生依赖）
 src/domain/pronouns.ts      纯逻辑：六行代词表与法语省音启发式——后者是法典唯一一条法语行为，且只影响显示（可单测，无原生依赖）
 src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
+src/storage/keyValueStorage.ts  三条 store 共用的存取缝（注入它，测试无需原生 mock）
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/storage/ownerStore.ts   **主人**名字的存储：一个键、立即落盘、不防抖（名字不是一个字一个字值得等的输入）
 src/storage/genreStore.ts   **复习箱**的存储：只收**一局**算好的账（`apply`）、一题一次立即落盘；不随备份移动
