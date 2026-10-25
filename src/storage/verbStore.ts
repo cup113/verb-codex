@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import { createEnvelope, useEnvelope } from './envelope';
+import { readItem } from './keyValueStorage';
 import type { KeyValueStorage } from './keyValueStorage';
 import { ConjugationRow, Group, Verb } from '../types';
 import {
@@ -54,8 +55,7 @@ export function createVerbStore(
 
   let verbs: Verb[] = [];
   let ready = false;
-  let snapshot: VerbState = { verbs, ready };
-  const listeners = new Set<() => void>();
+  const envelope = createEnvelope<VerbState>(() => ({ verbs, ready }));
 
   // Structural edits are written straight away; keystrokes coalesce. A revision
   // counter (rather than a dirty flag) keeps that correct when a write is still
@@ -65,8 +65,7 @@ export function createVerbStore(
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function publish(): void {
-    snapshot = { verbs, ready };
-    listeners.forEach(listener => listener());
+    envelope.publish();
   }
 
   async function writeNow(): Promise<void> {
@@ -98,12 +97,7 @@ export function createVerbStore(
   }
 
   async function init(): Promise<void> {
-    let raw: string | null = null;
-    try {
-      raw = await storage.getItem(VERBS_KEY);
-    } catch {
-      raw = null;
-    }
+    const raw = await readItem(storage, VERBS_KEY);
     const loaded = parseVerbs(raw);
     if (loaded.length > 0) {
       verbs = loaded;
@@ -253,11 +247,8 @@ export function createVerbStore(
   }
 
   return {
-    subscribe: listener => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    getSnapshot: () => snapshot,
+    subscribe: envelope.subscribe,
+    getSnapshot: envelope.getSnapshot,
     init,
     flush: writeNow,
     addVerb,
@@ -272,15 +263,11 @@ export function createVerbStore(
 }
 
 async function seedAlreadyRan(storage: KeyValueStorage): Promise<boolean> {
-  try {
-    return (await storage.getItem(SEEDED_KEY)) === 'true';
-  } catch {
-    return false;
-  }
+  return (await readItem(storage, SEEDED_KEY)) === 'true';
 }
 
 export const verbStore = createVerbStore(asyncStorageAdapter);
 
 export function useVerbState(): VerbState {
-  return useSyncExternalStore(verbStore.subscribe, verbStore.getSnapshot);
+  return useEnvelope(verbStore);
 }

@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import { createEnvelope, useEnvelope } from './envelope';
+import { readItem } from './keyValueStorage';
 import type { KeyValueStorage } from './keyValueStorage';
 import { emptyReview, parseReview, serializeReview } from '../domain/genre';
 import type { ReviewState } from '../domain/genre';
@@ -41,12 +42,10 @@ export type GenreStore = {
 export function createGenreStore(storage: KeyValueStorage): GenreStore {
   let review: ReviewState = emptyReview();
   let ready = false;
-  let snapshot: GenreState = { review, ready };
-  const listeners = new Set<() => void>();
+  const envelope = createEnvelope<GenreState>(() => ({ review, ready }));
 
   function publish(): void {
-    snapshot = { review, ready };
-    listeners.forEach(listener => listener());
+    envelope.publish();
   }
 
   function write(): Promise<void> {
@@ -56,13 +55,7 @@ export function createGenreStore(storage: KeyValueStorage): GenreStore {
   }
 
   async function init(): Promise<void> {
-    let raw: string | null = null;
-    try {
-      raw = await storage.getItem(GENRE_KEY);
-    } catch {
-      raw = null;
-    }
-    review = parseReview(raw);
+    review = parseReview(await readItem(storage, GENRE_KEY));
     ready = true;
     publish();
   }
@@ -87,11 +80,8 @@ export function createGenreStore(storage: KeyValueStorage): GenreStore {
   }
 
   return {
-    subscribe: listener => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    getSnapshot: () => snapshot,
+    subscribe: envelope.subscribe,
+    getSnapshot: envelope.getSnapshot,
     init,
     flush,
     apply,
@@ -102,5 +92,5 @@ export function createGenreStore(storage: KeyValueStorage): GenreStore {
 export const genreStore = createGenreStore(asyncStorageAdapter);
 
 export function useGenreState(): GenreState {
-  return useSyncExternalStore(genreStore.subscribe, genreStore.getSnapshot);
+  return useEnvelope(genreStore);
 }

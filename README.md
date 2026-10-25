@@ -41,7 +41,7 @@
 npm install
 npm start              # Metro
 npm run android        # 构建并安装到已连接的设备/模拟器
-npm test               # jest：297 个用例，覆盖领域逻辑（含备份信封与还原时的名字取舍、主人名、旧数据迁移、默写判定、卡片上自测与默写的转移、代词省音、辨性的 4 箱 Leitner 与抽题、一局的锁定与结算纸、拖动自动滚动的算式与搜索的折叠/匹配）、
+npm test               # jest：303 个用例，覆盖领域逻辑（含备份信封与还原时的名字取舍、主人名、旧数据迁移、默写判定、卡片上自测与默写的转移、代词省音、辨性的 4 箱 Leitner 与抽题、一局的锁定与结算纸、拖动自动滚动的算式与搜索的折叠/匹配）、
                        #        存储（含主人名与复习箱）、组件（变位行、默写行、列表行、搜索框、⋯ 菜单、辨性题卡）、列表页、详情页（含自测与默写）、
                        #        备份页（导出 / 粘贴导入 / 从文件导入）、辨性两屏（门厅 / 一局）与 App 装配
 npm run typecheck      # tsc --noEmit
@@ -61,8 +61,9 @@ src/domain/exercise.ts      纯逻辑：卡片上**自测 / 默写**的值——
 src/domain/genre.ts         纯逻辑：辨性的抽题（√词频、无放回）与 4 箱 Leitner、复习箱的容错读盘（可单测，无原生依赖）
 src/domain/sitting.ts       纯逻辑：**一局**的值与规则——抽题（词库 / 到期）、作答锁定、逐题推进、结算纸；箱的算术仍归 genre.ts，时钟与随机流走参数（可单测，无原生依赖）
 src/domain/pronouns.ts      纯逻辑：六行代词表与法语省音启发式——后者是法典唯一一条法语行为，且只影响显示（可单测，无原生依赖）
-src/storage/verbStore.ts    AsyncStorage 存储 + 订阅（存储接口可注入，测试无需原生 mock）
-src/storage/keyValueStorage.ts  三条 store 共用的存取缝（注入它，测试无需原生 mock）
+src/storage/verbStore.ts    条目的存储：revision + 防抖、结构改动立即落盘、首启种子（存储接口可注入，测试无需原生 mock）
+src/storage/keyValueStorage.ts  三条 store 共用的存取缝：类型 + 容错读（`readItem`，读不到就当没记过）
+src/storage/envelope.ts     三条 store 共用的响应外壳：快照缓存、订阅者、`useSyncExternalStore` 接线；写盘策略**不在**这里
 src/storage/asyncStorageAdapter{,.web}.ts  原生走 AsyncStorage，web 走 localStorage
 src/storage/ownerStore.ts   **主人**名字的存储：一个键、立即落盘、不防抖（名字不是一个字一个字值得等的输入）
 src/storage/genreStore.ts   **复习箱**的存储：只收**一局**算好的账（`apply`）、一题一次立即落盘；不随备份移动
@@ -213,7 +214,7 @@ npx vite preview    # 预览构建产物：service worker 只在构建产物里�
 
 | job       | 内容                                                                                                                                                                                                                   |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（246 个用例）                                                                                                                                  |
+| `js`      | `npm ci` → `lint` → `typecheck`（原生与 web 两个 program）→ `jest --ci`（303 个用例）                                                                                                                                  |
 | `android` | JDK **17**（RN 0.87 的 Gradle 插件严格要 17，JDK 21 不满足 toolchain 请求）→ 安装 NDK 27.1.12297006 / CMake 3.22.1 → `assembleRelease bundleRelease` → 校验 APK 内含 `assets/index.android.bundle` → 上传 APK/AAB 构件 |
 | `web`     | `npm ci` → `npm run web:build` → 断言产物真的构成一个 PWA（manifest、sw.js、两种尺寸图标、7 个字体——含两个中文合体字——都在），并上传 `dist/` 作为构件                                                                  |
 | `release` | 只在 `v*` tag 上运行，`needs: android`：取回该次运行的 APK/AAB 构件、改名为带版本号的文件，用 `gh release create --clobber` 挂到该 tag 的 GitHub Release 上                                                            |

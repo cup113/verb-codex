@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
 import { asyncStorageAdapter } from './asyncStorageAdapter';
+import { createEnvelope, useEnvelope } from './envelope';
+import { readItem } from './keyValueStorage';
 import type { KeyValueStorage } from './keyValueStorage';
 
 export const OWNER_KEY = 'verbcodex.owner.v1';
@@ -30,12 +31,10 @@ export type OwnerStore = {
 export function createOwnerStore(storage: KeyValueStorage): OwnerStore {
   let owner = '';
   let ready = false;
-  let snapshot: OwnerState = { owner, ready };
-  const listeners = new Set<() => void>();
+  const envelope = createEnvelope<OwnerState>(() => ({ owner, ready }));
 
   function publish(): void {
-    snapshot = { owner, ready };
-    listeners.forEach(listener => listener());
+    envelope.publish();
   }
 
   function write(): Promise<void> {
@@ -47,12 +46,7 @@ export function createOwnerStore(storage: KeyValueStorage): OwnerStore {
   }
 
   async function init(): Promise<void> {
-    let raw: string | null = null;
-    try {
-      raw = await storage.getItem(OWNER_KEY);
-    } catch {
-      raw = null;
-    }
+    const raw = await readItem(storage, OWNER_KEY);
     owner = raw === null ? '' : raw.trim();
     ready = true;
     publish();
@@ -73,11 +67,8 @@ export function createOwnerStore(storage: KeyValueStorage): OwnerStore {
   }
 
   return {
-    subscribe: listener => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    getSnapshot: () => snapshot,
+    subscribe: envelope.subscribe,
+    getSnapshot: envelope.getSnapshot,
     init,
     setOwner,
     flush,
@@ -87,5 +78,5 @@ export function createOwnerStore(storage: KeyValueStorage): OwnerStore {
 export const ownerStore = createOwnerStore(asyncStorageAdapter);
 
 export function useOwnerState(): OwnerState {
-  return useSyncExternalStore(ownerStore.subscribe, ownerStore.getSnapshot);
+  return useEnvelope(ownerStore);
 }
