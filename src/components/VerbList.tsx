@@ -100,6 +100,9 @@ type DraggableRowProps = {
   reorderEnabled: boolean;
   onPress: () => void;
   onToggleStar: () => void;
+  /** The mark's hold: the list stops scrolling for its length. */
+  onStarHoldStart: () => void;
+  onStarHoldEnd: () => void;
   onRowLayout: (height: number) => void;
   shared: DragShared;
 };
@@ -129,6 +132,8 @@ function DraggableRow({
   reorderEnabled,
   onPress,
   onToggleStar,
+  onStarHoldStart,
+  onStarHoldEnd,
   onRowLayout,
   shared,
 }: DraggableRowProps) {
@@ -257,8 +262,10 @@ function DraggableRow({
         onPress={onPress}
         onLongPress={swallowed}
         onToggleStar={onToggleStar}
+        onStarHoldStart={onStarHoldStart}
+        onStarHoldEnd={onStarHoldEnd}
         // The pick-up covers the words only: the mark is a touch target of its
-        // own, and a native handler active over it would cancel the 2s press
+        // own, and a native handler active over it would cancel the star hold
         // before it matured (see STAR_HOLD_MS in holds.ts). The Animated.View
         // still wraps the whole card, so the lifted row follows the finger as
         // one piece.
@@ -290,6 +297,9 @@ export function VerbList({
 
   const [dragging, setDragging] = useState(false);
   const [lifted, setLifted] = useState<number | null>(null);
+  // True while a mark is held: the scroll view must not take the touch back
+  // before the two-second star matures.
+  const [markHeld, setMarkHeld] = useState(false);
 
   const scrollOffset = useSharedValue(0);
   const scrollStart = useSharedValue(0);
@@ -511,13 +521,16 @@ export function VerbList({
           reorderEnabled={reorderEnabled}
           onPress={() => onPressVerb(item)}
           onToggleStar={() => onToggleStar(item.id, !item.starred)}
+          onStarHoldStart={() => setMarkHeld(true)}
+          onStarHoldEnd={() => setMarkHeld(false)}
           onRowLayout={onRowLayout}
           shared={shared}
         />
       )}
       // Off for the length of a drag, so the scroll view cannot take the
-      // pointer back from the row that is following the finger.
-      scrollEnabled={!dragging}
+      // pointer back from the row that is following the finger — and off while
+      // a mark is held, for the same reason, with two seconds to lose.
+      scrollEnabled={!dragging && !markHeld}
       onScroll={scrollHandler}
       scrollEventThrottle={16}
       onLayout={event => {

@@ -60,6 +60,10 @@ export function VerbList({
   // The gap the row would drop into: 0 above the first row, `verbs.length`
   // below the last. Only the marker needs it — the drop itself recomputes.
   const [dropSlot, setDropSlot] = useState<number | null>(null);
+  // A held mark disables the list's scrolling for the same reason the native
+  // one does: the scroll container would otherwise take the press away before
+  // the two seconds are up.
+  const [markHeld, setMarkHeld] = useState(false);
 
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressOrigin = useRef<{ x: number; y: number } | null>(null);
@@ -101,7 +105,7 @@ export function VerbList({
     event: ReactPointerEvent<HTMLDivElement>,
     verbId: string,
   ) => {
-    // The mark is a control of its own: a 2s hold there must not arm a drag at
+    // The mark is a control of its own: a star hold there must not arm a drag at
     // 400ms, or the browser would lift the row mid-hold and the star would
     // never fire. React Native Web has no hitSlop and the pointerdown bubbles
     // up to this wrapper, so ask the DOM which element was hit.
@@ -191,6 +195,9 @@ export function VerbList({
     <FlatList
       data={verbs}
       keyExtractor={verb => verb.id}
+      // A held star must outlive the scroll container's own gesture; the native
+      // list does the same (see VerbList).
+      scrollEnabled={!markHeld}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={verbs.length === 0 ? styles.emptyWrap : undefined}
@@ -241,6 +248,8 @@ export function VerbList({
               dragging={isArmed || isDragging}
               onPress={() => onPressVerb(item)}
               onToggleStar={() => onToggleStar(item.id, !item.starred)}
+              onStarHoldStart={() => setMarkHeld(true)}
+              onStarHoldEnd={() => setMarkHeld(false)}
             />
           </div>
         );

@@ -1,7 +1,9 @@
+import { useCallback, useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import { ROW_COUNT, Verb } from '../types';
-import { PICK_UP_HOLD_MS, STAR_HOLD_MS } from './holds';
+import { PICK_UP_HOLD_MS, STAR_HOLD_MS, STAR_HOLD_SLOP } from './holds';
 import { filledCount, isComplete } from '../domain/verbs';
 import { copy } from '../copy';
 import { cardSurface, colors, fonts, mono, serif } from '../theme';
@@ -9,9 +11,18 @@ import { cardSurface, colors, fonts, mono, serif } from '../theme';
 /**
  * The mark's own touch target, named for the web twin: a pointer that starts
  * on it must not arm the row's drag, or the browser would pick the row up at
- * 400ms and the 2s star would never mature. See VerbList.web.
+ * 400ms and the star would never mature. See VerbList.web.
  */
 export const MARK_TEST_ID = 'verb-mark';
+
+/** The long press is kept only for its side effects; see the mark below. */
+const swallowed = () => {};
+
+/** A press event's page point, whichever platform's shape it arrives in. */
+function touchPage(event: GestureResponderEvent): { x: number; y: number } {
+  const touch = event.nativeEvent.changedTouches?.[0] ?? event.nativeEvent;
+  return { x: touch.pageX, y: touch.pageY };
+}
 
 type Props = {
   verb: Verb;
@@ -38,6 +49,13 @@ type Props = {
    */
   onToggleStar?: () => void;
   /**
+   * Called when the mark's hold starts and ends. The list turns its scrolling
+   * off for the length of the hold: a ScrollView claims a touch after ~8pt of
+   * travel and would cancel the press before two seconds had passed.
+   */
+  onStarHoldStart?: () => void;
+  onStarHoldEnd?: () => void;
+  /**
    * Wraps the one part of the row that may be picked up and dragged: the
    * headword and its hint. The native list supplies its gesture detector here;
    * the mark has to stay outside it, because an active native handler cancels
@@ -57,9 +75,92 @@ export function VerbRow({
   onToggleStar,
   wrapDrag,
   dragging = false,
+  onStarHoldStart,
+  onStarHoldEnd,
 }: Props) {
   const filled = filledCount(verb);
   const complete = isComplete(verb);
+
+  // The star's own two-second clock, kept here rather than in `onLongPress`:
+  // both React Native and React Native Web cancel a built-in long press once
+  // the touch travels 10pt, and two seconds of holding moves further than that
+  // (see STAR_HOLD_SLOP in holds.ts). These refs hold the press's origin, how
+  // far it has drifted, and whether the star has already been written.
+  const starTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const starOrigin = useRef<{ x: number; y: number } | null>(null);
+  const starFired = useRef(false);
+  const starMoved = useRef(false);
+  const starHolding = useRef(false);
+
+  const clearStarTimer = useCallback(() => {
+    if (starTimer.current !== null) {
+      clearTimeout(starTimer.current);
+      starTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearStarTimer, [clearStarTimer]);
+
+  const beginStarHold = (event: GestureResponderEvent) => {
+    starFired.current = false;
+    starMoved.current = false;
+    starOrigin.current = touchPage(event);
+    clearStarTimer();
+    if (!complete) {
+      return;
+    }
+    // The list stops scrolling while this is held: a ScrollView would claim
+    // the touch after ~8pt and cancel the press, which is the same failure the
+    // 30pt allowance exists to avoid.
+    starHolding.current = true;
+    onStarHoldStart?.();
+    starTimer.current = setTimeout(() => {
+      starTimer.current = null;
+      starFired.current = true;
+      onToggleStar?.();
+    }, STAR_HOLD_MS);
+  };
+
+  const moveStarHold = (event: GestureResponderEvent) => {
+    const at = touchPage(event);
+    if (starOrigin.current === null) {
+      return;
+    }
+    const drift = Math.hypot(
+      at.x - starOrigin.current.x,
+      at.y - starOrigin.current.y,
+    );
+    if (drift > STAR_HOLD_SLOP) {
+      starMoved.current = true;
+      clearStarTimer();
+    }
+  };
+
+  const endStarHold = () => {
+    clearStarTimer();
+    starOrigin.current = null;
+    if (starHolding.current) {
+      starHolding.current = false;
+      onStarHoldEnd?.();
+    }
+  };
+
+  /**
+   * The mark's press: open the entry on a tap, swallow the release after a
+   * hold. `onLongPress` cannot do this because the platform cancels it on a
+   * small drift while still delivering the press on release — the star would
+   * be written and the entry opened at once.
+   */
+  const pressStar = () => {
+    const wrote = starFired.current;
+    const drifted = starMoved.current;
+    starFired.current = false;
+    starMoved.current = false;
+    if (wrote || drifted) {
+      return;
+    }
+    onPress();
+  };
 
   const words = (
     <View style={styles.words}>
@@ -117,8 +218,16 @@ export function VerbRow({
           holding the mark. */}
       <Pressable
         testID={MARK_TEST_ID}
-        onPress={onPress}
-        onLongPress={complete ? onToggleStar : undefined}
+        onPress={pressStar}
+        onPressIn={beginStarHold}
+        onPressMove={moveStarHold}
+        onPressOut={endStarHold}
+        // Not the star itself: this long press is cancelled by 10pt of drift,
+        // so `onPressIn` + the mark's own timer is what writes the star. The
+        // handler stays for its side effects — React Native Web only suppresses
+        // the touch context menu when one is present, and on native it keeps
+        // the star-hold release from also arriving as a press.
+        onLongPress={complete ? swallowed : undefined}
         delayLongPress={STAR_HOLD_MS}
         // About 45pt tall on the phone with the reach above and below; the
         // 44pt width is the zone itself. The web build has no hitSlop, so
@@ -201,7 +310,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  // The hold and the tap both need to show they landed; a 2s hold with no
+  // The hold and the tap both need to show they landed; a long hold with no
   // feedback reads as a broken press.
   markPressed: {
     opacity: 0.45,

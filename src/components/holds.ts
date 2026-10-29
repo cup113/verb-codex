@@ -22,12 +22,38 @@ export const PICK_UP_HOLD_MS = 400;
  *
  * The mark is a touch target of its own, outside the pick-up gesture's view:
  * gesture-handler activates the drag at `PICK_UP_HOLD_MS`, and an active native
- * handler cancels the pressable's timer, so a 2s hold nested inside the drag
+ * handler cancels the pressable's timer, so a star hold nested inside the drag
  * area would never mature. The two holds therefore never compete — the words
  * pick the row up, the mark marks it — which is also why the star's target is
  * the right-hand gutter (the mark and the ›) rather than the whole row.
  *
- * Two seconds is long enough to be unmistakably deliberate (a tap on the mark
- * still opens the entry) and short enough that a finger does not wander.
+ * 1.2 seconds is deliberate without being a patience test (a tap on the mark
+ * still opens the entry) — and no hold at all is short enough for the
+ * platform's own long press: both React Native and React Native Web cancel a
+ * long press once the touch has travelled 10pt (see `STAR_HOLD_SLOP`), while
+ * still treating the press as valid, so the release then opens the entry.
+ * `VerbRow` therefore runs its own timer and measures drift itself.
+ *
+ * It shipped as two seconds in 0.7.0 and was shortened once held on a phone:
+ * unmistakable turned out to mean "still waiting".
  */
-export const STAR_HOLD_MS = 2000;
+export const STAR_HOLD_MS = 1200;
+
+/**
+ * How far a finger may drift while holding the mark, in points.
+ *
+ * The platform's built-in long press gives up at 10pt and cannot be tuned from
+ * the props: React Native's `Pressability` cancels its timer past
+ * `DEFAULT_LONG_PRESS_DEACTIVATION_DISTANCE` (10), and React Native Web hard-
+ * codes the same `Math.hypot(...) > 10` in its responder — but neither cancels
+ * the *press*, so a slipped hold still opens the entry on release. A finger
+ * resting on a phone for the length of the hold moves further than that on
+ * its own; with the built-in long press the star was a test of steadiness,
+ * not a gesture.
+ *
+ * 30pt is about a thumb's unintended travel over the hold: forgiving of a
+ * tremor, still smaller than a deliberate drag. Drift beyond it cancels the
+ * hold *and* swallows the release, so a slipped finger neither stars nor jumps
+ * into the entry by accident.
+ */
+export const STAR_HOLD_SLOP = 30;

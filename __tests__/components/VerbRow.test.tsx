@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { MARK_TEST_ID, VerbRow } from '../../src/components/VerbRow';
-import { PICK_UP_HOLD_MS, STAR_HOLD_MS } from '../../src/components/holds';
+import { PICK_UP_HOLD_MS, STAR_HOLD_MS, STAR_HOLD_SLOP } from '../../src/components/holds';
 import { emptyRows } from '../../src/domain/verbs';
 import { copy } from '../../src/copy';
 import { colors, fonts } from '../../src/theme';
@@ -122,18 +122,106 @@ describe('VerbRow', () => {
     expect(colors.terracottaSoft).not.toBe(colors.terracotta);
   });
 
-  it('toggles the star from the mark, and only on a complete entry', () => {
-    const onToggleStar = jest.fn();
-    const complete = mark(render(makeVerb(SIX), { onToggleStar }));
-    expect(complete.props.onLongPress).toBeDefined();
-    ReactTestRenderer.act(() => {
-      complete.props.onLongPress();
-    });
-    expect(onToggleStar).toHaveBeenCalledTimes(1);
+  it('writes the star after its hold on the mark, and only on a complete entry', () => {
+    jest.useFakeTimers();
+    try {
+      const onToggleStar = jest.fn();
+      const complete = mark(render(makeVerb(SIX), { onToggleStar }));
+      ReactTestRenderer.act(() => {
+        complete.props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        jest.advanceTimersByTime(STAR_HOLD_MS - 1);
+      });
+      expect(onToggleStar).not.toHaveBeenCalled();
+      ReactTestRenderer.act(() => {
+        jest.advanceTimersByTime(1);
+      });
+      expect(onToggleStar).toHaveBeenCalledTimes(1);
 
-    // The ring is not a control: there is no complete entry to set aside yet.
-    const open = mark(render(makeVerb(['aime']), { onToggleStar }));
-    expect(open.props.onLongPress).toBeUndefined();
+      // The ring is not a control: there is no complete entry to set aside yet.
+      const onOpenStar = jest.fn();
+      const open = mark(
+        render(makeVerb(['aime']), { onToggleStar: onOpenStar }),
+      );
+      expect(open.props.onLongPress).toBeUndefined();
+      ReactTestRenderer.act(() => {
+        open.props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        jest.advanceTimersByTime(STAR_HOLD_MS * 2);
+      });
+      expect(onOpenStar).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('forgives a little drift and refuses a lot', () => {
+    // The platform's own long press dies at 10pt, which is why the mark runs
+    // its own clock; this is the margin that clock allows.
+    jest.useFakeTimers();
+    try {
+      const forgiving = jest.fn();
+      const held = mark(render(makeVerb(SIX), { onToggleStar: forgiving }));
+      ReactTestRenderer.act(() => {
+        held.props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        held.props.onPressMove({
+          nativeEvent: { pageX: 0, pageY: STAR_HOLD_SLOP - 1 },
+        });
+        jest.advanceTimersByTime(STAR_HOLD_MS);
+      });
+      expect(forgiving).toHaveBeenCalledTimes(1);
+
+      const slipped = jest.fn();
+      const slippedMark = mark(
+        render(makeVerb(SIX), { onToggleStar: slipped }),
+      );
+      ReactTestRenderer.act(() => {
+        slippedMark.props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        slippedMark.props.onPressMove({
+          nativeEvent: { pageX: 0, pageY: STAR_HOLD_SLOP + 1 },
+        });
+        jest.advanceTimersByTime(STAR_HOLD_MS);
+      });
+      expect(slipped).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('swallows the release after a star or a slip, and keeps the tap', () => {
+    jest.useFakeTimers();
+    try {
+      const onPress = jest.fn();
+      const onToggleStar = jest.fn();
+      const tree = render(makeVerb(SIX), { onPress, onToggleStar });
+      ReactTestRenderer.act(() => {
+        mark(tree).props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        jest.advanceTimersByTime(STAR_HOLD_MS);
+        mark(tree).props.onPressOut();
+        mark(tree).props.onPress();
+      });
+      expect(onToggleStar).toHaveBeenCalledTimes(1);
+      // The built-in long press cancels without cancelling the press, so the
+      // release would otherwise open the entry right after starring it.
+      expect(onPress).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('tells the list when the hold starts and ends, so it can stop scrolling', () => {
+    jest.useFakeTimers();
+    try {
+      const onStarHoldStart = jest.fn();
+      const onStarHoldEnd = jest.fn();
+      const tree = render(makeVerb(SIX), { onStarHoldStart, onStarHoldEnd });
+      ReactTestRenderer.act(() => {
+        mark(tree).props.onPressIn({ nativeEvent: { pageX: 0, pageY: 0 } });
+        mark(tree).props.onPressOut();
+      });
+      expect(onStarHoldStart).toHaveBeenCalledTimes(1);
+      expect(onStarHoldEnd).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('still opens the entry when the mark is tapped', () => {
@@ -159,7 +247,7 @@ describe('VerbRow', () => {
 
   it('wraps the words, not the mark, in the drag gesture', () => {
     // This is the whole gesture partition: if the mark sat inside the drag
-    // wrapper, the native handler would cancel the 2s press at 400ms.
+    // wrapper, the native handler would cancel the star hold at 400ms.
     const tree = render(makeVerb(SIX), {
       wrapDrag: node => <View testID="drag-wrap">{node}</View>,
     });
