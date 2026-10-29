@@ -2,6 +2,30 @@
 
 本文件记录变位法典的显著变更。格式参照 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [0.7.0] - 2026-10-29
+
+列表的完成记号现在也记主人的笔：**完整**条目按住两秒，✓ 盖上 **★**，再按两秒抹掉。**星标**落盘、随法典导出与导入移动，却从不掩盖完整——缺一行的星标条目仍画 ○，补满六行后自己回来（[ADR 0004](docs/adr/0004-star-mark-on-a-complete-entry.md)）。同批把四件住在屏幕里的东西搬成值：**默写**与**自测**、辨性的**一局**、整本**法典**的导入，以及三条 store 各自抄了一遍的响应外壳；屏幕从此只做视图。
+
+### Added
+
+- **星标（l’étoile）**：列表右侧记号上按住两秒，完整条目就把 ✓ 换成 ★，再按两秒抹掉；短按仍是打开条目。星是**动词条目**上的一个**记录值**（`starred`），随导出与导入移动，格式因此**不升版**——与**主人**名同一类处理。它只改记号：不动**次序**、不做筛选、不参与**自测**与**默写**，详情页也没有它的开关。**星不掩盖完整**：星标条目后来缺一行，星仍留在条目上、记号退回 ○，补满六行后 ★ 自己回来（[ADR 0004](docs/adr/0004-star-mark-on-a-complete-entry.md)、[CONTEXT.md](CONTEXT.md) 的**星标**）。无障碍上 iOS 与 Android 会把嵌套控件并进一行，星因此以行的自定义 action 出现（`Marquer d’une étoile` / `Retirer l’étoile`）；web 没有这种合并，它就是那个按钮，`selected` 只在「完整且带星」时报告。
+- **记号成了它自己的触摸区**：右侧 44pt 宽（原生用 `hitSlop` 补到约 45pt 高；web 没有 `hitSlop`，44×18 够鼠标用），短按打开条目、完整条目按住两秒切星。拿起重排就此按平台分区：原生只认**词区**——词与提示占的那一段；桌面浏览器认整行，**记号除外**（`pointerdown` 命中 `[data-testid=verb-mark]` 就不再武装拖动）。这不是顺手收窄：两秒与四百必须落在两个手势上，否则手势库在 400ms 就把按压取消，星永远等不到。
+- **符号字面 `NewsreaderSymbols`（6 508 字节）**：★ 不再借合并汉字字面——`web/fonts.css` 给那张脸写了 `unicode-range`，一颗星要价 3.5 MB，法语读者不该为一颗星付这笔账。`tools/make-symbols.py` 从 [Noto Sans Symbols 2](https://github.com/google/fonts/tree/main/ofl/notosanssymbols2) 子集出 U+2605/2606/2726/2727，家族名按文件名取，`assets/fonts` 与 `android/app/src/main/assets/fonts` 各一份；默写印章的 ✦ 一起迁进去，从此不再随平台落到不同的系统字形上（印章那一行仍是三段：✦ Sans faute ✦）。预缓存 22 → 23 项（约 2.1 MB），CI 的字体断言 7 → 8。
+
+### Changed
+
+- **默写与自测成值**（`src/domain/exercise.ts`）：ADR 0002 的规则——改一行撤回该行判定、首判全对才 flawless、盖戳之后不可再改——原先是五个 `useState` 与五处互相穿插的 `setState`，读一个概念要在它们之间来回。现在 `Exercise` 是一个值，未变化时返回同一对象；屏幕只剩这一个值，离开练习就是丢掉它——「退出即焚」不再是纪律，而是没有地方可存。盖戳之后不再接受键入（从前那能悄悄写进 `typed` 与 `verdicts`，屏幕上却看不出来）。既有 21 条断言一字未改即通过。
+- **一局成值**（`src/domain/sitting.ts`）：队列、锁定、进箱与两张结算纸成了纯函数，词库、账簿、时钟、随机流全走参数，`GenreDrillScreen` 从 412 行退到 310 行；同一批里门厅与结算纸把 `now` 当输入，到期数第一次可以被钉住（从前是在渲染里读 `Date.now()`，同一份账渲染两次可以得出两个数）。
+- **导入成值**（`restoreFrom` / `writeCodex`）：解析、提问、替换、命名四条规则离开屏幕，导出正文与文件名的日期出自同一个时刻；`BackupScreen` 因此有了它此前一条也没有的用例（12 例），「导入是替换、不合并」第一次被证明。
+- **三条 store 共用一套信封**（`src/storage/envelope.ts`、`keyValueStorage.ts`）：快照缓存、订阅者集合、`publish`、`useSyncExternalStore` 接线与容错读盘各只出现一次。写盘策略仍各留各的——`verbStore` 的 revision 计数 + 300ms 防抖、`genreStore` 的同账不写盘、`ownerStore` 的进出双向 trim，这三种才是 store 的深度。
+- **常量与 hook 各归其位**：`components/holds.ts`（拿起 400 与星标 2000 并排，连同「为什么两秒必须站在手势之外」）、`domain/pronouns.ts`（全库唯一一条法语行为：省音）、`SESSION_SIZE` 归 `sitting.ts`、`components/useArmedConfirm.ts`（条目页的删除与门厅的清空共用一条「两次点击、三秒撤回」的规则）。
+
+### 已知限制
+
+- 星随备份走，但**不随旧版本走**：0.6.2 及更早读到带星的备份只是不看这个字段，条目照常恢复；用旧版本导入再导出会丢星。这与**主人**名的处理相同，所以格式没有升版。
+- 按住右侧的记号不再能拿起重排（原生拿起只认**词区**，web 侧记号明确退出）。
+- ★ 的手感与热区只在 Web 端自动化复测过（按住 2.4 秒出星并写入 `localStorage`、短按仍打开条目、按住词区 400 ms 只武装拖动），Android 真机未跑。
+
 ## [0.6.2] - 2026-10-20
 
 **对错**有了自己的墨色：判定点新增一支墨绿专管「对」，赤陶被点名为「错」的批改笔——双色骨架没动，判定点从此一眼可读。
