@@ -8,6 +8,7 @@ import {
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
+  starAndMove,
   withGroup,
   withInfinitive,
   withNote,
@@ -560,5 +561,73 @@ describe('parseVerbs', () => {
     expect(verbs[0].rows[1]).toEqual({ form: '' });
     expect(verbs[1].group).toBe(1);
     expect(verbs[1].rows).toEqual(emptyRows());
+  });
+});
+
+describe('starAndMove', () => {
+  const entry = (id: string, group: 1 | 2 = 1) =>
+    createVerb({ id, infinitive: id, group, now: NOW });
+
+  it('takes a new star to the top of its group', () => {
+    const list = [entry('a'), entry('b'), entry('c')];
+
+    const starred = starAndMove(list, 'c', true, NOW + 1);
+
+    expect(starred.map(verb => verb.id)).toEqual(['c', 'a', 'b']);
+    expect(starred[0].starred).toBe(true);
+    expect(starred[0].updatedAt).toBe(NOW + 1);
+    // A new star does not disturb the stars that are already on the shelf.
+    expect(starred[1].starred).toBe(false);
+  });
+
+  it('leaves the other groups in the slots they held', () => {
+    // Two lists share one array: a star may only rewrite its own group's slots.
+    const list = [entry('a'), entry('x', 2), entry('b'), entry('c')];
+
+    const starred = starAndMove(list, 'c', true, NOW + 1);
+
+    expect(starred.map(verb => verb.id)).toEqual(['c', 'x', 'a', 'b']);
+    expect(starred[1]).toBe(list[1]);
+  });
+
+  it('puts a star that is taken back at the head of the unstarred ones', () => {
+    const list = [
+      withStarred(entry('a'), true, NOW),
+      withStarred(entry('b'), true, NOW),
+      entry('c'),
+      entry('d'),
+    ];
+
+    const cleared = starAndMove(list, 'a', false, NOW + 1);
+
+    expect(cleared.map(verb => verb.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(cleared[1].starred).toBe(false);
+  });
+
+  it('takes the last star back to the end of an all-starred group', () => {
+    const list = [
+      withStarred(entry('a'), true, NOW),
+      withStarred(entry('b'), true, NOW),
+    ];
+
+    const cleared = starAndMove(list, 'b', false, NOW + 1);
+
+    expect(cleared.map(verb => verb.id)).toEqual(['a', 'b']);
+    expect(cleared[1].starred).toBe(false);
+  });
+
+  it('moves nothing when the entry already carries that star', () => {
+    // Re-writing the same value must not re-apply the move: the owner's last
+    // drag is still the answer to where a starred entry sits.
+    const list = [withStarred(entry('a'), true, NOW), entry('b')];
+
+    expect(starAndMove(list, 'a', true, NOW + 1)).toBe(list);
+    expect(starAndMove(list, 'b', false, NOW + 1)).toBe(list);
+  });
+
+  it('ignores an entry that is not there', () => {
+    const list = [entry('a')];
+
+    expect(starAndMove(list, 'missing', true, NOW + 1)).toBe(list);
   });
 });

@@ -266,6 +266,56 @@ describe('createVerbStore', () => {
     expect(writes).toEqual([VERBS_KEY]);
   });
 
+  it('moves the starred entry to the top in that same write', async () => {
+    // One gesture, one array, one file write: the mark and the move are never
+    // stored apart.
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    await store.addVerb({ infinitive: 'aimer', group: 1 });
+    const parler = await store.addVerb({ infinitive: 'parler', group: 1 });
+    const chanter = await store.addVerb({ infinitive: 'chanter', group: 1 });
+    writes.length = 0;
+
+    await store.setStarred(chanter.id, true);
+
+    expect(store.getSnapshot().verbs.map(verb => verb.infinitive)).toEqual([
+      'chanter',
+      'aimer',
+      'parler',
+    ]);
+    expect(writes).toEqual([VERBS_KEY]);
+    expect(persisted(entries).map(verb => verb.infinitive)).toEqual([
+      'chanter',
+      'aimer',
+      'parler',
+    ]);
+
+    // A second star takes the top from the first; taking it back leaves the
+    // entry right below the stars, not back where it came from.
+    writes.length = 0;
+    await store.setStarred(parler.id, true);
+    expect(store.getSnapshot().verbs.map(verb => verb.infinitive)).toEqual([
+      'parler',
+      'chanter',
+      'aimer',
+    ]);
+
+    await store.setStarred(parler.id, false);
+    expect(store.getSnapshot().verbs.map(verb => verb.infinitive)).toEqual([
+      'chanter',
+      'parler',
+      'aimer',
+    ]);
+    expect(persisted(entries).map(verb => verb.starred)).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+
   it('does not write a star the entry already carries', async () => {
     const { storage, entries, writes } = memoryStorage({
       [SEEDED_KEY]: 'true',

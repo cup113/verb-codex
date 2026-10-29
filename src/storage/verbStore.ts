@@ -9,10 +9,10 @@ import {
   nextVerbId,
   parseVerbs,
   reorderWithinGroup,
+  starAndMove,
   withInfinitive,
   withNote,
   withRow,
-  withStarred,
 } from '../domain/verbs';
 import { seedVerbs } from '../data/seed';
 
@@ -213,23 +213,16 @@ export function createVerbStore(
   // The star is a deliberate write, not a keystroke: one gesture, one answer
   // on disk. A crash between the press and the debounce must not cost the mark
   // the owner just put on an entry — the same reason a group change is written
-  // at once.
+  // at once. The move that comes with it is part of that one write: value and
+  // position land together, never half of each.
   //
   // Completeness is the row's gate, not the store's: a star written on a
   // complete entry is kept when a row is later emptied (the mark hides, the
   // record stays), so refusing to store it would make the model disagree with
   // the state the list is built to show.
   async function setStarred(verbId: string, starred: boolean): Promise<void> {
-    const timestamp = now();
-    let changed = false;
-    const next = verbs.map(verb => {
-      if (verb.id !== verbId || verb.starred === starred) {
-        return verb;
-      }
-      changed = true;
-      return withStarred(verb, starred, timestamp);
-    });
-    if (!changed) {
+    const next = starAndMove(verbs, verbId, starred, now());
+    if (next === verbs) {
       return;
     }
     verbs = next;

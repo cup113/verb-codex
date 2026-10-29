@@ -122,6 +122,19 @@ export function moveToGroup(
 }
 
 /**
+ * Put a group's entries back into the array slots that group already occupies.
+ *
+ * Array position is the order (see reorderWithinGroup), so writing one group's
+ * sequence means handing its members back one per slot it already holds: the
+ * other groups keep the exact slots and objects they had, and moving an entry
+ * never shifts a list nobody is looking at.
+ */
+function withGroupOrder(verbs: Verb[], group: Group, order: Verb[]): Verb[] {
+  let next = 0;
+  return verbs.map(verb => (verb.group === group ? order[next++] : verb));
+}
+
+/**
  * Move one entry to a new position among the entries of its own group.
  *
  * Order is per group: the list is filtered by group, so a group's members
@@ -147,10 +160,43 @@ export function reorderWithinGroup(
   const reordered = [...inGroup];
   const [moved] = reordered.splice(from, 1);
   reordered.splice(to, 0, moved);
-  let next = 0;
-  return verbs.map(verb =>
-    verb.group === moving.group ? reordered[next++] : verb,
+  return withGroupOrder(verbs, moving.group, reordered);
+}
+
+/**
+ * Write the star, and move the entry to where a star goes in the order.
+ *
+ * The star is still a recorded value rather than a sort key: loading the codex
+ * sorts nothing, and dragging a starred entry back down is allowed. What this
+ * writes is the one-off move the owner asked for by pressing the mark — a new
+ * star takes the top of its group, and taking one back leaves the entry at the
+ * head of the unstarred ones.
+ *
+ * One write, not two: the value and the position change in the same array, so
+ * a crash cannot leave a starred entry sitting below the unstarred ones (see
+ * `setStarred` in verbStore). A call that would not change the value moves
+ * nothing and hands back the same array — a star is not re-applied by itself.
+ */
+export function starAndMove(
+  verbs: Verb[],
+  id: string,
+  starred: boolean,
+  now: number,
+): Verb[] {
+  const moving = verbs.find(verb => verb.id === id);
+  if (!moving || moving.starred === starred) {
+    return verbs;
+  }
+  const marked = withStarred(moving, starred, now);
+  const members = verbs.filter(
+    verb => verb.group === moving.group && verb.id !== id,
   );
+  const stars = members.filter(verb => verb.starred);
+  const rest = members.filter(verb => !verb.starred);
+  const order = starred
+    ? [marked, ...stars, ...rest]
+    : [...stars, marked, ...rest];
+  return withGroupOrder(verbs, moving.group, order);
 }
 
 /**
