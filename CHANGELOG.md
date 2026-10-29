@@ -2,6 +2,18 @@
 
 本文件记录变位法典的显著变更。格式参照 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [0.7.2] - 2026-10-29
+
+iPhone 与 iPad 上按住记号，星不出来，屏幕上却选中了一片文字。原因是那道「别选我」的声明写成了 WebKit 读不懂的形式：无前缀的 `user-select`。
+
+### Fixed
+
+- **iOS Safari 上长按记号不再变成文本选中**：行的不可选从前写成 React 的内联 `userSelect`，序列化出来只有无前缀的 `user-select: none`——Chromium 认，WebKit 不认（Safari 至今是最后一个不给无前缀 `user-select` 的引擎），于是行内文字仍是普通可选中文本，长按被系统拿去做选择。选择会把触摸序列取消掉，`Pressable` 因此收到终止信号、`onPressOut` 清掉星标的计时器，星永远等不到——这就是「按了没反应，反而选中了字」的完整链条。现在这条规则搬进 `web/app.css`，带 `-webkit-user-select` 与 `-webkit-touch-callout`（后者压掉 iOS 的「拷贝 / 查询」浮层与放大镜，前缀单写一个不够），作用域是行（`.verb-row` 及其后代），问候语、分组标签、Notes 与名字输入框仍可正常选中与粘贴。构建产物里两条前缀声明有 CI 断言守着。
+
+### 已知限制
+
+- 这一版仍只在 Web 端（桌面指针）复测：模拟不出 WebKit，真机结论要靠 iPad 上按住记号确认星是否照常出现。
+
 ## [0.7.1] - 2026-10-29
 
 星标在真机上几乎按不出来：按住记号的手指稍有漂移，星没等到，松手却直接进了词条。这不是手不稳——React Native 与 React Native Web 都把长按的漂移容差写死在 10pt，超过就悄悄取消计时，按压却还活着。修法：记号自己计时。
