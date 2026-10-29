@@ -1,0 +1,37 @@
+/*
+ * A row is a gesture, not prose. Holding it is either "pick it up" or "write the
+ * star on its mark", and neither survives a text selection: the browser's own
+ * selection takes the touch away mid-hold.
+ *
+ * Chromium accepts the bare `user-select: none` this used to be written as, in
+ * a React inline style — which is why the problem was invisible on Android,
+ * Edge and the APK. WebKit does not support the unprefixed property (Safari is
+ * the last engine blocking it), so the declaration was inert there: the row's
+ * words stayed ordinary selectable text, and iOS Safari answered a long press
+ * by selecting them. Selecting also cancels the touch it was born from, so the
+ * star's own timer never matured — the mark looked dead.
+ *
+ * Two consequences for how this is written:
+ *
+ * - A real stylesheet, not an inline style. React serialises `userSelect` as
+ *   `user-select` only, and that path also bypasses React Native Web's prefixer
+ *   (whose map does list `userSelect`).
+ * - `-webkit-touch-callout` is the second half rather than a duplicate: it
+ *   suppresses the iOS callout (Copy / Look Up / the magnifier) that
+ *   `user-select: none` does not, and iOS 15 shows a zoom callout even with the
+ *   prefix — WebKit has a fix for that filed as a regression.
+ *
+ * Scoped to the row, deliberately: `user-select` is not inherited in name only
+ * — descendants resolve `auto` against their parent, and older WebKit inherited
+ * the prefixed property outright — so the descendants are listed rather than
+ * assumed. Everything outside a row (the greeting, the tabs, the notes box, the
+ * name field) keeps normal selection: nothing there is a gesture, and copying a
+ * word out of the notebook is a reasonable thing to want.
+ */
+.verb-row,
+.verb-row * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from '../App';
 import app from '../app.json';
 import './fonts.css';
+import './app.css';
 
 // The same registration the Android entry point performs; on the web the
 // application is then mounted into a DOM node.

@@ -20,9 +20,11 @@ const dropLine = (edge: 'top' | 'bottom') =>
 
 const DRAG_SOURCE: CSSProperties = {
   cursor: 'grab',
-  // A row is a press target and a drag source; selecting its text helps with
-  // neither, and a half-selected label fights the drag.
-  userSelect: 'none',
+  // Selecting a row's text helps with neither the drag nor the press, and a
+  // half-selected label fights both. The rule lives in web/app.css rather than
+  // here: an inline `userSelect` is written without the `-webkit-` prefix,
+  // which WebKit ignores, so on iOS the rows stayed selectable and a long press
+  // selected text instead of arming anything.
 };
 
 /**
@@ -223,6 +225,9 @@ export function VerbList({
         };
         return (
           <div
+            // The row's own name, for the stylesheet that keeps a long press
+            // from turning into a text selection: see web/app.css.
+            className="verb-row"
             // Armed by the hold, not by the row being a row: see
             // PICK_UP_HOLD_MS. And never while the list is a filtered subset:
             // see reorderEnabled.

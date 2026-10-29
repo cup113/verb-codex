@@ -75,6 +75,11 @@ jobs:
           # check that "not precached" did not turn into "not built".
           test "$(ls dist/assets/*.ttf | wc -l)" -eq 8
           test "$(ls dist/assets/NewsreaderHan*.ttf | wc -l)" -eq 2
+          # A long press on a row is a gesture, not a selection: WebKit ignores
+          # the unprefixed `user-select`, so the prefixed pair is the whole
+          # guard — and it has to survive the CSS minifier to exist at all.
+          grep -q -- '-webkit-user-select:none' dist/assets/*.css
+          grep -q -- '-webkit-touch-callout:none' dist/assets/*.css
           echo "web bundle: $(du -sh dist | cut -f1)"
 
       - uses: actions/upload-artifact@v6
