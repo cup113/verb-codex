@@ -44,6 +44,7 @@ function seededCodex(): Verb[] {
         index === 0 ? { form: 'aime' } : row,
       ),
       note: '',
+      starred: false,
       createdAt: 0,
       updatedAt: 0,
     },
@@ -238,6 +239,59 @@ describe('createVerbStore', () => {
     await store.flush();
 
     expect(persisted(entries)[0].note).toBe('prononciation : èmé');
+  });
+
+  it('writes a star at once, and takes it back the same way', async () => {
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    writes.length = 0;
+
+    await store.setStarred(verb.id, true);
+
+    expect(store.getSnapshot().verbs[0].starred).toBe(true);
+    // A deliberate write, like a group change: it does not wait out the
+    // debounce that keystrokes share.
+    expect(writes).toEqual([VERBS_KEY]);
+    expect(persisted(entries)[0].starred).toBe(true);
+
+    writes.length = 0;
+    await store.setStarred(verb.id, false);
+
+    expect(store.getSnapshot().verbs[0].starred).toBe(false);
+    expect(persisted(entries)[0].starred).toBe(false);
+    expect(writes).toEqual([VERBS_KEY]);
+  });
+
+  it('does not write a star the entry already carries', async () => {
+    const { storage, entries, writes } = memoryStorage({
+      [SEEDED_KEY]: 'true',
+    });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    const verb = await store.addVerb({ infinitive: 'aimer', group: 1 });
+    await store.setStarred(verb.id, true);
+    writes.length = 0;
+
+    await store.setStarred(verb.id, true);
+
+    expect(writes).toEqual([]);
+    expect(persisted(entries)[0].starred).toBe(true);
+  });
+
+  it('ignores a star addressed to an entry that is gone', async () => {
+    const { storage, writes } = memoryStorage({ [SEEDED_KEY]: 'true' });
+    const store = createVerbStore(storage, { ...OPTIONS, seed: seededCodex });
+    await store.init();
+    writes.length = 0;
+
+    await store.setStarred('missing', true);
+
+    expect(writes).toEqual([]);
+    expect(store.getSnapshot().verbs).toEqual([]);
   });
 
   it('persists a reorder without disturbing the other groups', async () => {

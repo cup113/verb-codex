@@ -21,6 +21,7 @@ function entry(infinitive: string, forms: readonly string[], note = ''): Verb {
     tense: 'present',
     rows,
     note,
+    starred: false,
     createdAt: 0,
     updatedAt: 0,
   };

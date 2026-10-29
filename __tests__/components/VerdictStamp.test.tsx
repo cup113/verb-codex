@@ -3,7 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { VerdictStamp } from '../../src/components/VerdictStamp';
 import { copy } from '../../src/copy';
-import { colors } from '../../src/theme';
+import { colors, fonts } from '../../src/theme';
 
 const mounted: ReactTestRenderer.ReactTestRenderer[] = [];
 
@@ -64,6 +64,27 @@ describe('VerdictStamp', () => {
 
     expect(labelColor(tree, copy.stampCorrected)).toBe(colors.terracotta);
     expect(new Set(ruleColors(tree))).toEqual(new Set([colors.terracotta]));
+  });
+
+  it('sets the ornaments from the symbol face, not a borrowed system glyph', () => {
+    // The stamp's ✦ and the list's ★ come from the same four-codepoint face;
+    // before this, ✦ was whatever symbol glyph the device happened to own.
+    const ornaments = render('flawless')
+      .root.findAllByType(Text)
+      .filter(node => node.props.children === copy.stampOrnament);
+
+    expect(ornaments).toHaveLength(2);
+    ornaments.forEach(node => {
+      const style = StyleSheet.flatten(node.props.style);
+      expect(style.fontFamily).toBe(fonts.symbol);
+      expect(style.color).toBe(colors.verdictRight);
+    });
+    // The corrected remark carries no ornament at all.
+    expect(
+      render('corrected')
+        .root.findAllByType(Text)
+        .filter(node => node.props.children === copy.stampOrnament),
+    ).toHaveLength(0);
   });
 
   it('keeps the two tiers distinguishable by colour as well as by shape', () => {

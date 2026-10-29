@@ -17,6 +17,7 @@ export function createVerb(args: {
     tense: 'present',
     rows: emptyRows(),
     note: '',
+    starred: false,
     createdAt: args.now,
     updatedAt: args.now,
   };
@@ -37,7 +38,8 @@ export function filledCount(verb: Verb): number {
 /**
  * Whether all six rows hold a recorded word — the fact the list draws as a
  * tick. Read out of the rows every time: there is no field to fall out of step
- * with what was actually written.
+ * with what was actually written. The star is not part of this: it is a
+ * separate recorded value, and the mark draws it only once this is true.
  */
 export function isComplete(verb: Verb): boolean {
   return filledCount(verb) === ROW_COUNT;
@@ -66,6 +68,18 @@ export function withInfinitive(
 
 export function withNote(verb: Verb, note: string, now: number): Verb {
   return { ...verb, note, updatedAt: now };
+}
+
+/**
+ * Write or unwrite the owner's star.
+ *
+ * A recorded value like the note or the group, so it moves `updatedAt`. It is
+ * not read out of the rows and it is kept when the entry loses one — the list
+ * stops drawing it, because completeness is the stronger fact (see VerbRow).
+ * The codex only ever writes it because the owner held the mark down.
+ */
+export function withStarred(verb: Verb, starred: boolean, now: number): Verb {
+  return { ...verb, starred, updatedAt: now };
 }
 
 /** The group is recorded text too, so a change of it is a change of content. */
@@ -201,6 +215,10 @@ export function coerceVerb(value: unknown): Verb | null {
     tense: 'present',
     rows: coerceRows(candidate.rows),
     note: typeof candidate.note === 'string' ? candidate.note : '',
+    // Only a literal `true` is a star: a damaged file must not mark entries the
+    // owner never marked, and a missing field is the ordinary case for every
+    // backup written before stars existed.
+    starred: candidate.starred === true,
     createdAt,
     updatedAt:
       typeof candidate.updatedAt === 'number' ? candidate.updatedAt : createdAt,

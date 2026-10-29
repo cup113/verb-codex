@@ -53,6 +53,22 @@
 }
 
 /*
+ * The two marks the notebook writes as symbols: the list's star and the
+ * dictation stamp's ✦ (tools/make-symbols.py). Four codepoints in a few
+ * kilobytes — kept out of the hanzi faces on purpose, because ★ lives in
+ * their `unicode-range` and one star must not cost a French reader 3.5 MB.
+ * No `unicode-range` here: only a Text set in this family asks for it, and
+ * there are two of them.
+ */
+@font-face {
+  font-family: 'NewsreaderSymbols';
+  src: url('../assets/fonts/NewsreaderSymbols.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
  * One range for both hanzi faces: the ideographs and the punctuation that
  * belongs to them. Everything a French line can contain on its own is left
  * out on purpose (see the note above).

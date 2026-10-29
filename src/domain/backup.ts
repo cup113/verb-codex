@@ -13,6 +13,11 @@ import { coerceVerb } from './verbs';
  * direction: an older build reads such a file as it always read one (the extra
  * field is simply not looked at, and every entry is restored), and this build
  * reads a file without the field as a codex that never had a name recorded.
+ *
+ * The star follows the same rule: a file without `starred` reads as an unmarked
+ * codex, and an older build restores every entry but writes the star away on
+ * its next export. That is a loss the owner can see and write again, not a
+ * reason for an old build to refuse the whole file.
  */
 export const BACKUP_FORMAT = 2;
 const BACKUP_APP = 'verbcodex';

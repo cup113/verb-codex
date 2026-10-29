@@ -70,9 +70,22 @@ export function VerdictStamp({ tier, delay = 0 }: Props) {
         {/* The flawless stamp carries a second, inner rule — the double ring of
             a rubber stamp; the corrected remark is a single line. */}
         <View style={flawless ? styles.ringInner : styles.ringNone}>
-          <Text style={flawless ? styles.textFlawless : styles.textCorrected}>
-            {flawless ? copy.stampFlawless : copy.stampCorrected}
-          </Text>
+          {/* The ornament is a symbol, the words are the codex's italic: two
+              faces in one line, which is why this is three Texts and not one
+              string. Both marks come from NewsreaderSymbols — the same face as
+              the list's star — so the stamp no longer borrows a four-point
+              star from whichever system font the device happens to own. */}
+          <View style={styles.line}>
+            {flawless ? (
+              <Text style={styles.ornament}>{copy.stampOrnament}</Text>
+            ) : null}
+            <Text style={flawless ? styles.textFlawless : styles.textCorrected}>
+              {flawless ? copy.stampFlawless : copy.stampCorrected}
+            </Text>
+            {flawless ? (
+              <Text style={styles.ornament}>{copy.stampOrnament}</Text>
+            ) : null}
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -105,6 +118,20 @@ const styles = StyleSheet.create({
   ringNone: {
     paddingHorizontal: 4,
     paddingVertical: 1,
+  },
+  /** The stamp's one line: ornament, words, ornament. */
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ornament: {
+    fontFamily: fonts.symbol,
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.verdictRight,
+    // Stands in for the two spaces the old single string carried around its
+    // words.
+    marginHorizontal: 7,
   },
   textFlawless: {
     ...serif(19, {

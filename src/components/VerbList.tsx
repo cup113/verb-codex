@@ -12,7 +12,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { VerbRow } from './VerbRow';
-import { PICK_UP_HOLD_MS } from './pickUpHold';
+import { PICK_UP_HOLD_MS } from './holds';
 import { autoScrollStep } from './verbListAutoScroll';
 import type { Verb } from '../types';
 
@@ -34,6 +34,8 @@ export type VerbListProps = {
    */
   reorderEnabled: boolean;
   onPressVerb: (verb: Verb) => void;
+  /** Write or unwrite the star on one entry, from its mark. */
+  onToggleStar: (verbId: string, starred: boolean) => void;
   /** Ordering is the native affordance; the web twin accepts and ignores it. */
   onReorder: (verbId: string, toIndex: number) => void;
 };
@@ -97,6 +99,7 @@ type DraggableRowProps = {
   hint?: string;
   reorderEnabled: boolean;
   onPress: () => void;
+  onToggleStar: () => void;
   onRowLayout: (height: number) => void;
   shared: DragShared;
 };
@@ -125,6 +128,7 @@ function DraggableRow({
   hint,
   reorderEnabled,
   onPress,
+  onToggleStar,
   onRowLayout,
   shared,
 }: DraggableRowProps) {
@@ -242,20 +246,32 @@ function DraggableRow({
   }, [rowIndex]);
 
   return (
-    <GestureDetector gesture={pickUp}>
-      <Animated.View
-        style={style}
-        onLayout={event => onRowLayout(event.nativeEvent.layout.height)}
-      >
-        <VerbRow
-          verb={verb}
-          hint={hint}
-          dragging={lifted}
-          onPress={onPress}
-          onLongPress={swallowed}
-        />
-      </Animated.View>
-    </GestureDetector>
+    <Animated.View
+      style={style}
+      onLayout={event => onRowLayout(event.nativeEvent.layout.height)}
+    >
+      <VerbRow
+        verb={verb}
+        hint={hint}
+        dragging={lifted}
+        onPress={onPress}
+        onLongPress={swallowed}
+        onToggleStar={onToggleStar}
+        // The pick-up covers the words only: the mark is a touch target of its
+        // own, and a native handler active over it would cancel the 2s press
+        // before it matured (see STAR_HOLD_MS in holds.ts). The Animated.View
+        // still wraps the whole card, so the lifted row follows the finger as
+        // one piece.
+        //
+        // This is a render prop, not a component definition: it returns the
+        // same GestureDetector element around a node that already exists, so
+        // nothing is remounted and the lint rule's premise does not hold.
+        // eslint-disable-next-line react/no-unstable-nested-components
+        wrapDrag={node => (
+          <GestureDetector gesture={pickUp}>{node}</GestureDetector>
+        )}
+      />
+    </Animated.View>
   );
 }
 
@@ -266,6 +282,7 @@ export function VerbList({
   hintOf,
   reorderEnabled,
   onPressVerb,
+  onToggleStar,
   onReorder,
 }: VerbListProps) {
   const listRef = useRef<FlatList<Verb>>(null);
@@ -493,6 +510,7 @@ export function VerbList({
           hint={hintOf(item) ?? undefined}
           reorderEnabled={reorderEnabled}
           onPress={() => onPressVerb(item)}
+          onToggleStar={() => onToggleStar(item.id, !item.starred)}
           onRowLayout={onRowLayout}
           shared={shared}
         />

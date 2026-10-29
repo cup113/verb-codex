@@ -21,8 +21,11 @@ export const copy = {
   tipWrite: 'Écrivez les six formes',
   tipCorrect: 'Corrigez les lignes barrées',
   // A teacher marks faults, not successes: the flawless paper gets the stamp
-  // the exercise is named after, a corrected one the smaller remark.
-  stampFlawless: '✦ Sans faute ✦',
+  // the exercise is named after, a corrected one the smaller remark. The
+  // ornament is its own string because it is set in the symbol face while the
+  // words stay in the codex's italic (see VerdictStamp).
+  stampOrnament: '✦',
+  stampFlawless: 'Sans faute',
   stampCorrected: 'Bien corrigé',
   // The way back names where it goes: a group on the entry screen, and the
   // plain word on the two screens that do not stand in a group at all.
@@ -51,6 +54,12 @@ export const copy = {
   // the row's own text no longer carries how much is on paper.
   rowsRecorded: (filled: number, total: number) =>
     `${filled} ligne${filled > 1 ? 's' : ''} sur ${total}`,
+  // The star is read out, never printed: the mark itself says it on the list.
+  // Named by the act, because the row already says whether it is complete —
+  // a long press here is the only way to write or unwrite it.
+  star: 'Marquer d’une étoile',
+  unstar: 'Retirer l’étoile',
+  starHint: 'Appui long de deux secondes',
   masked: '…',
   noteLabel: 'Notes',
   notePlaceholder: 'Prononciation, usage, remarques…',

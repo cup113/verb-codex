@@ -12,6 +12,7 @@ import {
   withInfinitive,
   withNote,
   withRow,
+  withStarred,
 } from '../../src/domain/verbs';
 import { ROW_COUNT } from '../../src/types';
 
@@ -278,6 +279,70 @@ describe('notes', () => {
       },
     ]);
     expect(parseVerbs(kept)[0].note).toBe('prononciation : èmé');
+  });
+});
+
+describe('stars', () => {
+  it('starts unmarked, so a star is always the owner’s own act', () => {
+    const verb = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
+
+    expect(verb.starred).toBe(false);
+  });
+
+  it('writes the star, stamps the update, and leaves the original alone', () => {
+    const verb = createVerb({
+      id: 'v1',
+      infinitive: 'aimer',
+      group: 1,
+      now: NOW,
+    });
+    const starred = withStarred(verb, true, NOW + 5);
+
+    expect(starred.starred).toBe(true);
+    expect(starred.updatedAt).toBe(NOW + 5);
+    expect(verb.starred).toBe(false);
+  });
+
+  it('keeps the star when a row is emptied — the list stops drawing it', () => {
+    // The star is a recorded value, not a reading of the rows: losing a row
+    // hides the mark rather than deleting the owner's writing.
+    const starred = withStarred(
+      createVerb({ id: 'v1', infinitive: 'aimer', group: 1, now: NOW }),
+      true,
+      NOW,
+    );
+    const reopened = withRow(starred, 0, { form: '' }, NOW + 1);
+
+    expect(reopened.starred).toBe(true);
+    expect(isComplete(reopened)).toBe(false);
+  });
+
+  it('reads a backup written before stars existed as unmarked', () => {
+    const legacy = JSON.stringify([
+      { id: 'old', infinitive: 'aimer', group: 1, rows: [] },
+    ]);
+
+    expect(parseVerbs(legacy)[0].starred).toBe(false);
+  });
+
+  it('treats only a literal true as a star', () => {
+    // A damaged payload must not mark entries the owner never marked.
+    const payload = JSON.stringify([
+      { id: 'a', infinitive: 'aimer', starred: 'yes' },
+      { id: 'b', infinitive: 'finir', starred: 1 },
+      { id: 'c', infinitive: 'aller', starred: true },
+    ]);
+
+    expect(parseVerbs(payload).map(verb => verb.starred)).toEqual([
+      false,
+      false,
+      true,
+    ]);
   });
 });
 

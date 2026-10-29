@@ -83,6 +83,15 @@ export const fonts = {
   serifItalicHan: serifItalicFamily,
   mono: 'JetBrainsMonoRegular',
   monoMedium: 'JetBrainsMonoMedium',
+  /**
+   * The two marks that are symbols rather than drawn shapes: the list's ★ and
+   * the dictation stamp's ✦. One 6 KB face (tools/make-symbols.py), because
+   * ★ in the merged hanzi face would drag its 3.5 MB download into a
+   * French-only reader, and the stamp used to borrow a different glyph from
+   * every platform's fallback. Same name on both targets: Android resolves a
+   * family by file name, the web declares it in web/fonts.css.
+   */
+  symbol: 'NewsreaderSymbols',
 } as const;
 
 export const serif = (size: number, extra?: TextStyle): TextStyle => ({

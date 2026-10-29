@@ -14,6 +14,7 @@ function verb(overrides: Partial<Verb> = {}): Verb {
       index === 0 ? { form: 'aime' } : row,
     ),
     note: 'aimer + infinitif',
+    starred: false,
     createdAt: 1,
     updatedAt: 2,
     ...overrides,
@@ -31,6 +32,26 @@ describe('writeCodex', () => {
     expect(read.ok).toBe(true);
     expect(read.ok && read.verbs).toEqual(verbs);
     expect(read.ok && read.exportedAt).toBe(EXPORTED_AT);
+  });
+
+  it('carries the star, and a file without one reads as unmarked', () => {
+    const starred = verb({ starred: true });
+    const read = parseBackup(
+      writeCodex({ verbs: [starred], owner: '' }, EXPORTED_AT).text,
+    );
+    expect(read.ok && read.verbs[0].starred).toBe(true);
+
+    // Every backup written before stars existed: the field is simply absent,
+    // and that must not cost the entries around it.
+    const legacy = parseBackup(
+      JSON.stringify({
+        app: 'verbcodex',
+        format: 2,
+        verbs: [{ id: 'v1', infinitive: 'aimer' }],
+      }),
+    );
+    expect(legacy.ok && legacy.verbs[0].starred).toBe(false);
+    expect(legacy.ok && legacy.verbs).toHaveLength(1);
   });
 
   it('indents the file, so its owner can read and diff it', () => {
@@ -139,6 +160,7 @@ describe('parseBackup', () => {
       tense: 'present',
       rows: emptyRows(),
       note: '',
+      starred: false,
       createdAt: 0,
       updatedAt: 0,
     });

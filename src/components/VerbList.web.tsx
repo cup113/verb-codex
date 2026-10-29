@@ -5,8 +5,8 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { VerbRow } from './VerbRow';
-import { PICK_UP_HOLD_MS } from './pickUpHold';
+import { VerbRow, MARK_TEST_ID } from './VerbRow';
+import { PICK_UP_HOLD_MS } from './holds';
 import { insertionIndex } from '../domain/verbs';
 import { colors } from '../theme';
 import type { VerbListProps } from './VerbList';
@@ -50,6 +50,7 @@ export function VerbList({
   hintOf,
   reorderEnabled,
   onPressVerb,
+  onToggleStar,
   onReorder,
 }: VerbListProps) {
   // The row whose hold has matured: only it is draggable, and only until the
@@ -100,6 +101,17 @@ export function VerbList({
     event: ReactPointerEvent<HTMLDivElement>,
     verbId: string,
   ) => {
+    // The mark is a control of its own: a 2s hold there must not arm a drag at
+    // 400ms, or the browser would lift the row mid-hold and the star would
+    // never fire. React Native Web has no hitSlop and the pointerdown bubbles
+    // up to this wrapper, so ask the DOM which element was hit.
+    if (
+      (event.target as Element | null)?.closest?.(
+        `[data-testid="${MARK_TEST_ID}"]`,
+      )
+    ) {
+      return;
+    }
     // A filtered list is a subset of the group, not its arrangement: arming a
     // drag there would hand the drop to a slot that is not the one aimed at.
     if (!reorderEnabled) {
@@ -228,6 +240,7 @@ export function VerbList({
               // lifted edge the native row gets when it is picked up.
               dragging={isArmed || isDragging}
               onPress={() => onPressVerb(item)}
+              onToggleStar={() => onToggleStar(item.id, !item.starred)}
             />
           </div>
         );

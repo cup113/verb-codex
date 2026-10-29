@@ -65,14 +65,15 @@ jobs:
           grep -q '"purpose":"maskable"' dist/manifest.webmanifest
           # The fonts are part of the look: if they stopped being emitted, the
           # installed app would render in a fallback face and nobody would see
-          # it until someone opened the installed app. Seven files: the five
-          # Latin faces and the two merged CJK ones.
+          # it until someone opened the installed app. Eight files: the six
+          # local faces (the three Newsreader text faces, the two mono faces
+          # and the symbol face) and the two merged CJK ones.
           #
           # The CJK pair is deliberately kept out of the precache manifest (at
           # ~3.4 MB each they dwarf the shell and blow workbox's per-file
           # limit) and fetched on demand instead, so this count is also the
           # check that "not precached" did not turn into "not built".
-          test "$(ls dist/assets/*.ttf | wc -l)" -eq 7
+          test "$(ls dist/assets/*.ttf | wc -l)" -eq 8
           test "$(ls dist/assets/NewsreaderHan*.ttf | wc -l)" -eq 2
           echo "web bundle: $(du -sh dist | cut -f1)"
 

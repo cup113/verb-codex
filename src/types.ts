@@ -22,6 +22,13 @@ export type Verb = {
    * it is recorded text and nothing more.
    */
   note: string;
+  /**
+   * The owner's own mark, written by hand on a complete entry. It is a recorded
+   * value, not a fact read out of the rows: it survives the loss of a row (the
+   * list just draws the completeness ring instead), and it travels with the
+   * codex in a backup. See docs/adr/0004-star-mark-on-a-complete-entry.md.
+   */
+  starred: boolean;
   createdAt: number;
   updatedAt: number;
 };

@@ -12,6 +12,7 @@ import {
   withInfinitive,
   withNote,
   withRow,
+  withStarred,
 } from '../domain/verbs';
 import { seedVerbs } from '../data/seed';
 
@@ -33,6 +34,8 @@ export type VerbStore = {
   setRow(verbId: string, index: number, patch: Partial<ConjugationRow>): void;
   setInfinitive(verbId: string, infinitive: string): void;
   setNote(verbId: string, note: string): void;
+  /** Write or unwrite the owner's own mark on an entry. */
+  setStarred(verbId: string, starred: boolean): Promise<void>;
   setGroup(verbId: string, group: Group): Promise<void>;
   reorderVerb(verbId: string, toIndex: number): Promise<void>;
   removeVerb(verbId: string): Promise<void>;
@@ -207,6 +210,34 @@ export function createVerbStore(
     await writeNow();
   }
 
+  // The star is a deliberate write, not a keystroke: one gesture, one answer
+  // on disk. A crash between the press and the debounce must not cost the mark
+  // the owner just put on an entry — the same reason a group change is written
+  // at once.
+  //
+  // Completeness is the row's gate, not the store's: a star written on a
+  // complete entry is kept when a row is later emptied (the mark hides, the
+  // record stays), so refusing to store it would make the model disagree with
+  // the state the list is built to show.
+  async function setStarred(verbId: string, starred: boolean): Promise<void> {
+    const timestamp = now();
+    let changed = false;
+    const next = verbs.map(verb => {
+      if (verb.id !== verbId || verb.starred === starred) {
+        return verb;
+      }
+      changed = true;
+      return withStarred(verb, starred, timestamp);
+    });
+    if (!changed) {
+      return;
+    }
+    verbs = next;
+    revision++;
+    publish();
+    await writeNow();
+  }
+
   // Not debounced like typing: reordering is structural, and the entry
   // objects themselves are only moved, never rewritten, so updatedAt stays
   // a record of content changes.
@@ -255,6 +286,7 @@ export function createVerbStore(
     setRow,
     setInfinitive,
     setNote,
+    setStarred,
     setGroup,
     reorderVerb,
     removeVerb,

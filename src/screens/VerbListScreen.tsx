@@ -178,6 +178,9 @@ export function VerbListScreen({ navigation }: Props) {
         onPressVerb={verb =>
           navigation.navigate('VerbDetail', { verbId: verb.id, group })
         }
+        onToggleStar={(verbId, starred) =>
+          verbStore.setStarred(verbId, starred)
+        }
         onReorder={(verbId, toIndex) => verbStore.reorderVerb(verbId, toIndex)}
       />
     </Screen>

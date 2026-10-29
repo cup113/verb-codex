@@ -267,6 +267,29 @@ describe('VerbListScreen', () => {
     expect(order).toEqual(['GroupTabs', 'SearchField', 'VerbList']);
   });
 
+  it('writes the star from the row’s mark and draws it in place of the tick', async () => {
+    const { tree } = await renderList();
+    expect(tree.root.findAllByType(VerbRow)[0].props.verb.starred).toBe(false);
+
+    await ReactTestRenderer.act(async () => {
+      await tree.root.findAllByType(VerbRow)[0].props.onToggleStar();
+    });
+
+    expect(
+      verbStore.getSnapshot().verbs.find(verb => verb.id === 'seed-aimer')
+        ?.starred,
+    ).toBe(true);
+    expect(tree.root.findAllByType(VerbRow)[0].props.verb.starred).toBe(true);
+    expect(screenText(tree)).toContain('★');
+
+    // The store is shared with the rest of this file: leave it as it was found.
+    await ReactTestRenderer.act(async () => {
+      await verbStore.setStarred('seed-aimer', false);
+      await verbStore.flush();
+    });
+    expect(screenText(tree)).not.toContain('★');
+  });
+
   it('keeps Sauvegarde in the ⋯ menu rather than in the header', async () => {
     const { tree, navigation } = await renderList();
 
@@ -306,9 +329,9 @@ describe('VerbListScreen', () => {
 
     // The order is the prototype's: what leaves the device, then the exercise.
     expect(
-      tree.root.findByType(MoreMenu).props.items.map(
-        (item: { label: string }) => item.label,
-      ),
+      tree.root
+        .findByType(MoreMenu)
+        .props.items.map((item: { label: string }) => item.label),
     ).toEqual([copy.backupLink, copy.genreLink]);
     expect(screenText(tree)).toContain(copy.genreLink);
 
